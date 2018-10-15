@@ -1,0 +1,235 @@
+# 2 "asmcomp/genm/emit.mlp"
+(**************************************************************************)
+(*                                                                        *)
+(*                                 OCaml                                  *)
+(*                                                                        *)
+(*                 Nandor Licker, University of Cambridge                 *)
+(*                                                                        *)
+(*   Copyright 2018--     Nandor Licker                                   *)
+(*                                                                        *)
+(*   All rights reserved.  This file is distributed under the terms of    *)
+(*   the GNU Lesser General Public License version 2.1, with the          *)
+(*   special exception on linking described in the file LICENSE.          *)
+(*                                                                        *)
+(**************************************************************************)
+
+(* Specific operations for the GenM processor *)
+
+open Cmm
+open Mach
+open Linearize
+open Emitaux
+open Reg
+
+let items = ref []
+
+let emit_symbol s = Emitaux.emit_symbol '$' s
+
+let emit_float f = emit_string (string_of_float f)
+
+let emit_linear body =
+  (* Find the next available virtual register *)
+  let next_reg = ref 0 in
+  let rec find_regs i =
+    let max_reg = function
+      | { loc = Reg r } ->
+        next_reg := max (r + 1) !next_reg
+      | _ -> assert false
+    in
+    i.arg |> Array.iter max_reg;
+    i.res |> Array.iter max_reg;
+    if i.desc <> Lend then find_regs i.next
+  in
+  find_regs body;
+
+  let make_temp () = let n = !next_reg in next_reg := n + 1; n in
+  let emit_temp n = emit_string ("$" ^ (string_of_int n)) in
+
+  let emit_const n =
+    let reg = make_temp () in
+    `  imm.i64 {emit_temp reg}, {emit_int n}\n`;
+    reg
+  in
+
+  let emit_cc cc =
+    let cc_str = match cc with
+      | Isigned   Ceq -> "eq"
+      | Isigned   Cne -> "ne"
+      | Isigned   Clt -> "lt_s"
+      | Isigned   Cgt -> "gt_s"
+      | Isigned   Cle -> "le_s"
+      | Isigned   Cge -> "ge_s"
+      | Iunsigned Ceq -> "eq"
+      | Iunsigned Cne -> "ne"
+      | Iunsigned Clt -> "ls_u"
+      | Iunsigned Cgt -> "gt_u"
+      | Iunsigned Cle -> "le_u"
+      | Iunsigned Cge -> "ge_u"
+    in emit_string cc_str
+  in
+
+  let emit_reg = function
+    | {loc = Reg r} ->
+      emit_string ("$" ^ (string_of_int r))
+    | _ ->
+      assert false
+  in
+
+  let emit_label lbl =
+    emit_string ".BB"; emit_int lbl
+  in
+
+  let emit_op = function
+    | Imove ->
+      `  move\n`
+    | Ispill ->
+      `  spill\n`
+    | Ireload ->
+      `  reload\n`
+    | Iconst_int(_) ->
+      `  const_int\n`
+    | Iconst_float(_) ->
+      `  const_float\n`
+    | Iconst_symbol(_) ->
+      `  const_symbol\n`
+    | Icall_ind(_) ->
+      `  call_ind\n`
+    | Icall_imm(_) ->
+      `  call_imm\n`
+    | Itailcall_ind(_) ->
+      `  tailcall_ind\n`
+    | Itailcall_imm(_) ->
+      `  tailcall_imm\n`
+    | Iextcall(_) ->
+      `  extcall\n`
+    | Istackoffset(_) ->
+      `  stackoffset\n`
+    | Iload(_) ->
+      `  load\n`
+    | Istore(_) ->
+      `  store\n`
+    | Ialloc(_) ->
+      `  alloc\n`
+    | Iintop(_) ->
+      `  intop\n`
+    | Iintop_imm(_) ->
+      `  intop_imm\n`
+    | Inegf ->
+      `  negf\n`
+    | Iabsf ->
+      `  absf\n`
+    | Iaddf ->
+      `  addf\n`
+    | Isubf ->
+      `  subf\n`
+    | Imulf ->
+      `  mulf\n`
+    | Idivf ->
+      `  divf\n`
+    | Ifloatofint ->
+      `  floatofint\n`
+    | Iintoffloat ->
+      `  intoffloat\n`
+    | Ispecific(_) ->
+      `  specific\n`
+    | Iname_for_debugger(_) ->
+      `  name_for_debugger\n`
+  in
+  let emit_instr arg res = function
+    | Lend ->
+      ()
+    | Lop(Imove) ->
+      `  mov.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
+    | Lop(Iconst_int n) ->
+      `  imm.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`
+    | Lop(Iconst_symbol s) ->
+      `  addr.i64 {emit_reg res.(0)}, {emit_symbol s}\n`
+    | Lop(op) ->
+      emit_op op
+    | Lreloadretaddr ->
+      ()
+    | Lreturn ->
+      `  return\n`
+    | Llabel(label) ->
+      `{emit_label label}:\n`
+    | Lbranch(label) ->
+      `  jmp {emit_label label}\n`
+    | Lcondbranch(test, label) ->
+      (match test with
+      | Itruetest ->
+        `  truetest\n`
+      | Ifalsetest ->
+        `  falsetest\n`
+      | Iinttest _cmp ->
+        `  inttest\n`
+      | Iinttest_imm(cc, n) ->
+        let imm = emit_const n in
+        let flag = make_temp () in
+        `  set{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  jt {emit_temp flag}, {emit_label label}\n`
+      | Ifloattest _cmp ->
+        `  floattest\n`
+      | Ioddtest ->
+        `  oddtest\n`
+      | Ieventest ->
+        `  eventest\n`
+      );
+    | Lcondbranch3(_lb1, _lb2, _lb3) ->
+      `  cond_br_3\n`
+    | Lswitch(_labels) ->
+      `  switch\n`
+    | Lsetuptrap(_label) ->
+      `  setup_trap\n`
+    | Lpushtrap ->
+      `  push_trap\n`
+    | Lpoptrap ->
+      `  pop_trap\n`
+    | Lraise(_raise) ->
+      `  raise\n`
+  in
+  let rec emit instr =
+    emit_instr instr.arg instr.res instr.desc;
+    if instr.desc <> Lend then emit instr.next
+  in
+  emit body
+
+let data = function
+  | [] -> ()
+  | data -> items := List.append !items [data]
+
+let fundecl f =
+  `\n\nfunction {emit_symbol f.fun_name} \{\n`;
+  emit_linear f.fun_body;
+  `}\n`
+
+let begin_assembly () =
+  ``
+
+let end_assembly () =
+  let globals = ref [] in
+
+  (* Emit a data section with all structures *)
+  `\n\ndata \{`;
+  !items |> List.iter (fun items ->
+      `\n`;
+      items |> List.iter (fun item -> match item with
+      | Cglobal_symbol s   -> globals := s :: !globals
+      | Cstring s          -> emit_string_directive "    string  " s
+      | Cskip n            -> if n > 0 then `    space   {emit_int n}\n`
+      | Cdefine_symbol s   -> `  {emit_symbol s}:\n`
+      | Calign n           -> `    align   {emit_int n}\n`
+      | Cint8 n            -> `    int8    {emit_int n}\n`
+      | Cint16 n           -> `    int16   {emit_int n}\n`
+      | Cint32 n           -> `    int32   {emit_int (Nativeint.to_int n)}\n`
+      | Cint n             -> `    int64   {emit_int (Nativeint.to_int n)}\n`
+      | Csymbol_address s  -> `    addr    {emit_symbol s}\n`
+      | Csingle f          -> `    float32 {emit_float f}\n`
+      | Cdouble f          -> `    float64 {emit_float f}\n`
+      )
+  );
+  `}\n`;
+
+  (* Emit a list of all global symbols *)
+  `\n\nglobals \{\n`;
+  !globals |> List.iter (fun global -> `  {emit_symbol global}\n`);
+  `}\n`

@@ -167,7 +167,7 @@ typedef uint64_t uintnat;
 
 #if defined(__GNUC__) && __GNUC__ >= 2 && !defined(DEBUG) \
     && !defined (SHRINKED_GNUC) && !defined(CAML_JIT)
-#define THREADED_CODE
+//#define THREADED_CODE
 #endif
 
 

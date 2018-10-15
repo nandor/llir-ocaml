@@ -75,7 +75,7 @@ let frame_size () =
     (if !contains_calls then 4 else 0)
   in Misc.align sz 8
 
-let slot_offset loc cl =
+let slot_offset locd cl =
   match loc with
     Incoming n ->
       assert (n >= 0);

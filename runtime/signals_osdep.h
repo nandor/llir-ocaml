@@ -392,6 +392,37 @@
   #define CONTEXT_YOUNG_PTR (context->sregs->regs.gprs[11])
   #define CONTEXT_SP (context->sregs->regs.gprs[15])
 
+/****************** GenM:amd64, MacOSX */
+
+#elif defined(TARGET_genm) && defined (SYS_macosx)
+
+  #define DECLARE_SIGNAL_HANDLER(name) \
+    static void name(int sig, siginfo_t * info, void * context)
+
+  #define SET_SIGACT(sigact,name) \
+     sigact.sa_sigaction = (name); \
+     sigact.sa_flags = SA_SIGINFO | SA_64REGSET
+
+  #include <sys/ucontext.h>
+  #include <AvailabilityMacros.h>
+
+  #if !defined(MAC_OS_X_VERSION_10_5) \
+      || MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5
+    #define CONTEXT_REG(r) r
+  #else
+    #define CONTEXT_REG(r) __##r
+  #endif
+
+  typedef unsigned long long context_reg;
+  #define CONTEXT_STATE (((ucontext_t *)context)->uc_mcontext->CONTEXT_REG(ss))
+  #define CONTEXT_PC (CONTEXT_STATE.CONTEXT_REG(rip))
+  #define CONTEXT_EXCEPTION_POINTER (CONTEXT_STATE.CONTEXT_REG(r14))
+  #define CONTEXT_YOUNG_PTR (CONTEXT_STATE.CONTEXT_REG(r15))
+  #define CONTEXT_SP (CONTEXT_STATE.CONTEXT_REG(rsp))
+  #define CONTEXT_FAULTING_ADDRESS ((char *) info->si_addr)
+
+  #define RETURN_AFTER_STACK_OVERFLOW
+
 /******************** Default */
 
 #else
