@@ -37,6 +37,7 @@ open Mach
 
 let spill_env = ref (Reg.Map.empty : Reg.t Reg.Map.t)
 
+(*
 let spill_reg r =
   try
     Reg.Map.find r !spill_env
@@ -46,7 +47,7 @@ let spill_reg r =
     if not (Reg.anonymous r) then spill_r.raw_name <- r.raw_name;
     spill_env := Reg.Map.add r spill_r !spill_env;
     spill_r
-
+*)
 (* Record the position of last use of registers *)
 
 let use_date = ref (Reg.Map.empty : int Reg.Map.t)
@@ -119,10 +120,13 @@ let destroyed_at_fork = ref ([] : (instruction * Reg.Set.t) list)
 (* First pass: insert reload instructions based on an approximation of
    what is destroyed at pressure points. *)
 
-let add_reloads regset i =
+let add_reloads _regset i =
+  (*
   Reg.Set.fold
     (fun r i -> instr_cons (Iop Ireload) [|spill_reg r|] [|r|] i)
     regset i
+  *)
+  i
 
 let reload_at_exit = ref []
 
@@ -144,7 +148,7 @@ let rec reload i before =
        Reg.Set.empty)
   | Iop(Icall_ind _ | Icall_imm _ | Iextcall { alloc = true; }) ->
       (* All regs live across must be spilled *)
-      let (new_next, finally) = reload i.next Reg.Set.empty (*i.live*) in
+      let (new_next, finally) = reload i.next i.live in
       (add_reloads (Reg.inter_set_array before i.arg)
                    (instr_cons_debug i.desc i.arg i.res i.dbg new_next),
        finally)
@@ -285,10 +289,13 @@ let inside_loop = ref false
 and inside_arm = ref false
 and inside_catch = ref false
 
-let add_spills regset i =
+let add_spills _regset i =
+  i
+  (*
   Reg.Set.fold
     (fun r i -> instr_cons (Iop Ispill) [|r|] [|spill_reg r|] i)
     regset i
+  *)
 
 let rec spill i finally =
   match i.desc with

@@ -68,18 +68,12 @@ let loc_results arg =
   Array.mapi (fun i _arg -> register i Result) arg
 
 
-let loc_external_results _res =
-  failwith "loc_external_results"
-  (*
+let loc_external_results res =
   Array.mapi (fun i _arg -> register i Result) res
-  *)
 
-let loc_external_arguments _arg =
-  failwith "loc_external_arguments"
-  (*
+let loc_external_arguments arg =
   let loc =  arg |> Array.mapi (fun i _arg -> [| register i Arg |])
   in (loc, 0)
-  *)
 
 
 let register_name reg = "$" ^ string_of_int reg

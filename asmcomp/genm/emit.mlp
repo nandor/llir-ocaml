@@ -15,6 +15,8 @@
 
 (* Specific operations for the GenM processor *)
 
+[@@@ocaml.warning "-26-27"]
+
 open Arch
 open Cmm
 open Mach
@@ -105,6 +107,28 @@ let emit_linear fast body =
     emit_string ".BB"; emit_int lbl
   in
 
+  let emit_intop res lhs rhs op =
+    let emit inst =
+      `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`
+    in
+    match op with
+    | Iadd    -> emit "add"
+    | Isub    -> emit "sub"
+    | Imul    -> emit "mul"
+    | Imulh   -> emit "mulh"
+    | Idiv    -> emit "div"
+    | Imod    -> emit "mod"
+    | Iand    -> emit "and"
+    | Ior     -> emit "or"
+    | Ixor    -> emit "xor"
+    | Ilsl    -> emit "lsl"
+    | Ilsr    -> emit "lsr"
+    | Iasr    -> emit "asr"
+    | Icomp _ -> `TODO comp\n`;
+    | Icheckbound _ ->
+      `TODO: checkbound\n`;
+  in
+
   let emit_op arg res = function
     | Imove ->
       failwith "  move\n"
@@ -119,17 +143,25 @@ let emit_linear fast body =
     | Icall_ind _ ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
-      `  call{emit_string types} {emit_regs res}, {emit_regs arg} @caml_call_frame\n`;
-    | Icall_imm(_) ->
-      failwith "  call_imm\n"
+      `  call{emit_string types} {emit_regs res}, {emit_regs arg} @caml_call_frame\n`
+    | Icall_imm { func } ->
+      let nres = Array.length res in
+      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let addr = make_temp () in
+      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  call{emit_string types} {emit_regs res}, {emit_temp addr}, {emit_regs arg} @caml_call_frame\n`
     | Itailcall_ind(_) ->
       `  tcall {emit_regs arg}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  tcall {emit_temp addr}, {emit_regs arg}\n`
-    | Iextcall(_) ->
-      failwith "  extcall\n"
+    | Iextcall { func } ->
+      let nres = Array.length res in
+      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let addr = make_temp () in
+      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  call{emit_string types} {emit_temp addr}, {emit_regs arg}\n`
     | Istackoffset(_) ->
       failwith "  stackoffset\n"
     | Iload(size, addr) ->
@@ -142,9 +174,9 @@ let emit_linear fast body =
         | Thirtytwo_signed   -> "4.s64"
         | Word_int           -> "8.u64"
         | Word_val           -> "8.u64"
-        | Single             -> assert false
-        | Double             -> assert false
-        | Double_u           -> assert false
+        | Single             -> "4.f64"
+        | Double             -> "8.f64"
+        | Double_u           -> "8.f64"
       in
       (match addr with
       | Iindexed(0) ->
@@ -161,9 +193,9 @@ let emit_linear fast body =
         | Sixteen_unsigned   | Sixteen_signed     -> "2.i64"
         | Thirtytwo_unsigned | Thirtytwo_signed   -> "4.i64"
         | Word_int           | Word_val           -> "8.i64"
-        | Single   -> assert false
-        | Double   -> assert false
-        | Double_u -> assert false
+        | Single   -> "8.f32"
+        | Double   -> "8.f64"
+        | Double_u -> "8.f64"
       in
       (match addr with
       | Iindexed(0) ->
@@ -197,12 +229,13 @@ let emit_linear fast body =
         `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
         gc_sites := { gc_lbl; gc_ret } :: !gc_sites
       end else begin
-        failwith "Ialloc";
+        `  TODO: Ialloc\n`;
       end
-    | Iintop(_) ->
-      failwith "  intop\n"
-    | Iintop_imm(_) ->
-      failwith "  intop_imm\n"
+    | Iintop(op) ->
+      emit_intop res arg (fun () -> emit_reg arg.(1)) op
+    | Iintop_imm(op, n) ->
+      let imm = emit_const n in
+      emit_intop res arg (fun () -> emit_temp imm) op
     | Inegf ->
       failwith "  negf\n"
     | Iabsf ->
@@ -251,8 +284,10 @@ let emit_linear fast body =
         failwith "  truetest\n"
       | Ifalsetest ->
         failwith "  falsetest\n"
-      | Iinttest _cmp ->
-        failwith "  inttest\n"
+      | Iinttest cc ->
+        let flag = make_temp () in
+        `  set{emit_cc cc} {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  jt {emit_temp flag}, {emit_label label}\n`
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
@@ -261,20 +296,32 @@ let emit_linear fast body =
       | Ifloattest _cmp ->
         failwith "  floattest\n"
       | Ioddtest ->
-        failwith "  oddtest\n"
+        let imm = emit_const 1 in
+        let flag = make_temp () in
+        `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  jt {emit_temp flag}, {emit_label label}\n`
       | Ieventest ->
-        failwith "  eventest\n"
+        let imm = emit_const 1 in
+        let flag = make_temp () in
+        `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  jf {emit_temp flag}, {emit_label label}\n`
       );
     | Lcondbranch3(_lb1, _lb2, _lb3) ->
       failwith "  cond_br_3\n"
-    | Lswitch(_labels) ->
-      failwith "  switch\n"
+    | Lswitch(labels) ->
+      `  switch {emit_reg arg.(0)}, [\n`;
+      let n = Array.length labels in
+      Array.iteri (fun i l ->
+        `    {emit_label l}`;
+        if i + 1 <> n then `,\n` else `\n`
+      ) labels;
+      `  ]\n`
     | Lsetuptrap(_label) ->
-      failwith "  setup_trap\n"
+      `  TODO: setup_trap\n`
     | Lpushtrap ->
-      failwith "  push_trap\n"
+      `  TODO: push_trap\n`
     | Lpoptrap ->
-      failwith "  pop_trap\n"
+      `  TODO: pop_trap\n`
     | Lraise(raise) ->
       (match raise with
       | Cmm.Raise_withtrace ->
