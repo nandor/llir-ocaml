@@ -30,17 +30,29 @@ let emit_float f = emit_string (string_of_float f)
 let emit_linear body =
   (* Find the next available virtual register *)
   let next_reg = ref 0 in
+  let args = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r } ->
-        next_reg := max (r + 1) !next_reg
-      | _ -> assert false
+        next_reg := max (r + 1) !next_reg;
+        if r >= Proc.num_available_registers.(0) then begin
+          match r land 7 with
+          | 0 -> (* argument *) Hashtbl.replace args r (r lsr 3)
+          | 1 -> (* param *)    ()
+          | 2 -> (* result *)   ()
+          | _ -> assert false
+        end
+      | { loc = Unknown } -> failwith "reg: unknown"
+      | { loc = Stack _ } -> failwith "reg: stack"
     in
     i.arg |> Array.iter max_reg;
     i.res |> Array.iter max_reg;
     if i.desc <> Lend then find_regs i.next
   in
   find_regs body;
+  args |> Hashtbl.iter (fun arg idx ->
+    `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
+  );
 
   let make_temp () = let n = !next_reg in next_reg := n + 1; n in
   let emit_temp n = emit_string ("$" ^ (string_of_int n)) in

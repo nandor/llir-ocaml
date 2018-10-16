@@ -144,7 +144,7 @@ let rec reload i before =
        Reg.Set.empty)
   | Iop(Icall_ind _ | Icall_imm _ | Iextcall { alloc = true; }) ->
       (* All regs live across must be spilled *)
-      let (new_next, finally) = reload i.next i.live in
+      let (new_next, finally) = reload i.next Reg.Set.empty (*i.live*) in
       (add_reloads (Reg.inter_set_array before i.arg)
                    (instr_cons_debug i.desc i.arg i.res i.dbg new_next),
        finally)

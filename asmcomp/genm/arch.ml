@@ -28,8 +28,11 @@ let division_crashes_on_overflow = true
 
 let spacetime_node_hole_pointer_is_live_before _ = false
 
-let print_addressing = function
-  | _ -> failwith "X"
+let print_addressing printreg addr ppf arg =
+  match addr with
+  | Iindexed(n) ->
+    printreg ppf arg.(0);
+    if n <> 0 then Format.fprintf ppf ", %i" n
 
 let print_specific_operation _ _ _ _ =
   failwith "print_specific_operation"
