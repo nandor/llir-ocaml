@@ -14,8 +14,7 @@
 
 (* Specific operations for the GenM processor *)
 
-type addressing_mode =
-  | Iindexed of int
+type addressing_mode = Iindexed of int
 
 type specific_operation
 

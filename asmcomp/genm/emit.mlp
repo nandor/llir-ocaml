@@ -15,33 +15,39 @@
 
 (* Specific operations for the GenM processor *)
 
+open Arch
 open Cmm
 open Mach
 open Linearize
 open Emitaux
 open Reg
 
+type alloc_site = { gc_lbl: label; gc_ret: label }
+
 let items = ref []
 
-let emit_symbol s = Emitaux.emit_symbol '$' s
+let emit_symbol s = Emitaux.emit_symbol '_' s
 
 let emit_float f = emit_string (string_of_float f)
 
-let emit_linear body =
+let emit_linear fast body =
+  let gc_sites = ref [] in
+
   (* Find the next available virtual register *)
   let next_reg = ref 0 in
-  let args = Hashtbl.create 10 in
+  let params = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r } ->
-        next_reg := max (r + 1) !next_reg;
-        if r >= Proc.num_available_registers.(0) then begin
+        let n =  Proc.num_available_registers.(0) in
+        if r >= n then begin
           match r land 7 with
-          | 0 -> (* argument *) Hashtbl.replace args r (r lsr 3)
-          | 1 -> (* param *)    ()
+          | 0 -> (* argument *) ()
+          | 1 -> (* param *)    Hashtbl.replace params r ((r - n) lsr 3)
           | 2 -> (* result *)   ()
           | _ -> assert false
-        end
+        end else
+          next_reg := max (r + 1) !next_reg;
       | { loc = Unknown } -> failwith "reg: unknown"
       | { loc = Stack _ } -> failwith "reg: stack"
     in
@@ -50,7 +56,7 @@ let emit_linear body =
     if i.desc <> Lend then find_regs i.next
   in
   find_regs body;
-  args |> Hashtbl.iter (fun arg idx ->
+  params |> Hashtbl.iter (fun arg idx ->
     `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
   );
 
@@ -87,65 +93,136 @@ let emit_linear body =
       assert false
   in
 
+  let emit_regs regs =
+    let n = Array.length regs in
+    Array.iteri (fun i reg ->
+      emit_reg reg;
+      if i + 1 <> n then emit_string ", "
+    ) regs
+  in
+
   let emit_label lbl =
     emit_string ".BB"; emit_int lbl
   in
 
-  let emit_op = function
+  let emit_op arg res = function
     | Imove ->
-      `  move\n`
-    | Ispill ->
-      `  spill\n`
-    | Ireload ->
-      `  reload\n`
+      failwith "  move\n"
+    | Ispill -> assert false
+    | Ireload -> assert false
     | Iconst_int(_) ->
-      `  const_int\n`
+      failwith "  const_int\n"
     | Iconst_float(_) ->
-      `  const_float\n`
+      failwith "  const_float\n"
     | Iconst_symbol(_) ->
-      `  const_symbol\n`
-    | Icall_ind(_) ->
-      `  call_ind\n`
+      failwith "  const_symbol\n"
+    | Icall_ind _ ->
+      let nres = Array.length res in
+      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      `  call{emit_string types} {emit_regs res}, {emit_regs arg} @caml_call_frame\n`;
     | Icall_imm(_) ->
-      `  call_imm\n`
+      failwith "  call_imm\n"
     | Itailcall_ind(_) ->
-      `  tailcall_ind\n`
-    | Itailcall_imm(_) ->
-      `  tailcall_imm\n`
+      `  tcall {emit_regs arg}\n`
+    | Itailcall_imm { func } ->
+      let addr = make_temp () in
+      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  tcall {emit_temp addr}, {emit_regs arg}\n`
     | Iextcall(_) ->
-      `  extcall\n`
+      failwith "  extcall\n"
     | Istackoffset(_) ->
-      `  stackoffset\n`
-    | Iload(_) ->
-      `  load\n`
-    | Istore(_) ->
-      `  store\n`
-    | Ialloc(_) ->
-      `  alloc\n`
+      failwith "  stackoffset\n"
+    | Iload(size, addr) ->
+      let instr = match size with
+        | Byte_unsigned      -> "1.u64"
+        | Byte_signed        -> "1.s64"
+        | Sixteen_unsigned   -> "2.u64"
+        | Sixteen_signed     -> "2.s64"
+        | Thirtytwo_unsigned -> "4.u64"
+        | Thirtytwo_signed   -> "4.s64"
+        | Word_int           -> "8.u64"
+        | Word_val           -> "8.u64"
+        | Single             -> assert false
+        | Double             -> assert false
+        | Double_u           -> assert false
+      in
+      (match addr with
+      | Iindexed(0) ->
+        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_reg arg.(0)}]\n`
+      | Iindexed(n) ->
+        let imm = emit_const n in
+        let addr = make_temp () in
+        `  add.i64 {emit_temp addr}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_temp addr}]\n`
+      )
+    | Istore(size, addr, _) ->
+      let instr = match size with
+        | Byte_unsigned      | Byte_signed        -> "1.i64"
+        | Sixteen_unsigned   | Sixteen_signed     -> "2.i64"
+        | Thirtytwo_unsigned | Thirtytwo_signed   -> "4.i64"
+        | Word_int           | Word_val           -> "8.i64"
+        | Single   -> assert false
+        | Double   -> assert false
+        | Double_u -> assert false
+      in
+      (match addr with
+      | Iindexed(0) ->
+        `  st.{emit_string instr} [{emit_reg arg.(1)}], {emit_reg arg.(0)}\n`
+      | Iindexed(n) ->
+        let imm = emit_const n in
+        let addr = make_temp () in
+        `  add.i64 {emit_temp addr}, {emit_reg arg.(1)}, {emit_temp imm}\n`;
+        `  st.{emit_string instr} [{emit_temp addr}], {emit_reg arg.(0)}\n`
+      );
+    | Ialloc { words } ->
+      if fast then begin
+        let gc_ret = new_label () in
+        let gc_lbl = new_label () in
+        `{emit_label gc_ret}:\n`;
+        let addr_young_lim = make_temp () in
+        let addr_young_ptr = make_temp () in
+        let young_lim = make_temp () in
+        let young_ptr = make_temp () in
+        let new_ptr = make_temp () in
+        let flag = make_temp () in
+        let immw = emit_const words in
+        `  addr.i64 {emit_temp addr_young_lim}, {emit_symbol "caml_young_limit"}\n`;
+        `  ld.8.i64 {emit_temp young_lim}, [{emit_temp addr_young_lim}]\n`;
+        `  addr.i64 {emit_temp addr_young_ptr}, {emit_symbol "caml_young_ptr"}\n`;
+        `  ld.8.i64 {emit_temp young_ptr}, [{emit_temp addr_young_ptr}]\n`;
+        `  sub.i64 {emit_temp new_ptr}, {emit_temp young_ptr}, {emit_temp immw}\n`;
+        `  setlt.i64 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
+        `  jt {emit_temp flag}, {emit_label gc_lbl}\n`;
+        let imm8 = emit_const 8 in
+        `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
+        gc_sites := { gc_lbl; gc_ret } :: !gc_sites
+      end else begin
+        failwith "Ialloc";
+      end
     | Iintop(_) ->
-      `  intop\n`
+      failwith "  intop\n"
     | Iintop_imm(_) ->
-      `  intop_imm\n`
+      failwith "  intop_imm\n"
     | Inegf ->
-      `  negf\n`
+      failwith "  negf\n"
     | Iabsf ->
-      `  absf\n`
+      failwith "  absf\n"
     | Iaddf ->
-      `  addf\n`
+      failwith "  addf\n"
     | Isubf ->
-      `  subf\n`
+      failwith "  subf\n"
     | Imulf ->
-      `  mulf\n`
+      failwith "  mulf\n"
     | Idivf ->
-      `  divf\n`
+      failwith "  divf\n"
     | Ifloatofint ->
-      `  floatofint\n`
+      failwith "  floatofint\n"
     | Iintoffloat ->
-      `  intoffloat\n`
+      failwith "  intoffloat\n"
     | Ispecific(_) ->
-      `  specific\n`
+      failwith "  specific\n"
     | Iname_for_debugger(_) ->
-      `  name_for_debugger\n`
+      failwith "  name_for_debugger\n"
   in
   let emit_instr arg res = function
     | Lend ->
@@ -157,11 +234,13 @@ let emit_linear body =
     | Lop(Iconst_symbol s) ->
       `  addr.i64 {emit_reg res.(0)}, {emit_symbol s}\n`
     | Lop(op) ->
-      emit_op op
+      emit_op arg res op
     | Lreloadretaddr ->
       ()
     | Lreturn ->
-      `  return\n`
+      let nargs = Array.length arg in
+      let types = String.concat "" (List.init nargs (fun _ -> ".i64")) in
+      `  ret{emit_string types} {emit_regs arg}\n`;
     | Llabel(label) ->
       `{emit_label label}:\n`
     | Lbranch(label) ->
@@ -169,41 +248,57 @@ let emit_linear body =
     | Lcondbranch(test, label) ->
       (match test with
       | Itruetest ->
-        `  truetest\n`
+        failwith "  truetest\n"
       | Ifalsetest ->
-        `  falsetest\n`
+        failwith "  falsetest\n"
       | Iinttest _cmp ->
-        `  inttest\n`
+        failwith "  inttest\n"
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
         `  set{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifloattest _cmp ->
-        `  floattest\n`
+        failwith "  floattest\n"
       | Ioddtest ->
-        `  oddtest\n`
+        failwith "  oddtest\n"
       | Ieventest ->
-        `  eventest\n`
+        failwith "  eventest\n"
       );
     | Lcondbranch3(_lb1, _lb2, _lb3) ->
-      `  cond_br_3\n`
+      failwith "  cond_br_3\n"
     | Lswitch(_labels) ->
-      `  switch\n`
+      failwith "  switch\n"
     | Lsetuptrap(_label) ->
-      `  setup_trap\n`
+      failwith "  setup_trap\n"
     | Lpushtrap ->
-      `  push_trap\n`
+      failwith "  push_trap\n"
     | Lpoptrap ->
-      `  pop_trap\n`
-    | Lraise(_raise) ->
-      `  raise\n`
+      failwith "  pop_trap\n"
+    | Lraise(raise) ->
+      (match raise with
+      | Cmm.Raise_withtrace ->
+        let exn = make_temp () in
+        `  addr.i64 {emit_temp exn}, {emit_symbol "caml_raise_exn"}\n`;
+        `  tcall {emit_temp exn}, {emit_regs arg} @caml_raise_frame\n`;
+      | Cmm.Raise_notrace ->
+        failwith "Cmm.Raise_notrace"
+      )
   in
-  let rec emit instr =
-    emit_instr instr.arg instr.res instr.desc;
-    if instr.desc <> Lend then emit instr.next
+  let rec emit = function
+    | { desc = Lend } -> ()
+    | instr ->
+      emit_instr instr.arg instr.res instr.desc;
+      emit instr.next
   in
-  emit body
+  emit body;
+  !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
+    `{emit_label gc_lbl}:\n`;
+    let addr = make_temp () in
+    `  addr.i64 {emit_temp addr}, {emit_symbol "caml_call_gc"}\n`;
+    `  call {emit_temp addr} @caml_gc_frame\n`;
+    `  jmp {emit_label gc_ret}\n`
+  )
 
 let data = function
   | [] -> ()
@@ -211,7 +306,7 @@ let data = function
 
 let fundecl f =
   `\n\nfunction {emit_symbol f.fun_name} \{\n`;
-  emit_linear f.fun_body;
+  emit_linear f.fun_fast f.fun_body;
   `}\n`
 
 let begin_assembly () =
