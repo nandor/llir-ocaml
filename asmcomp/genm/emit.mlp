@@ -51,8 +51,8 @@ let emit_linear fast body =
           | _ -> assert false
         end else
           next_reg := max (r + 1) !next_reg;
-      | { loc = Unknown } -> failwith "reg: unknown"
-      | { loc = Stack _ } -> failwith "reg: stack"
+      | { loc = Unknown } -> assert false
+      | { loc = Stack _ } -> assert false
     in
     i.arg |> Array.iter max_reg;
     i.res |> Array.iter max_reg;
@@ -70,6 +70,12 @@ let emit_linear fast body =
     let reg = make_temp () in
     `  imm.i64 {emit_temp reg}, {emit_int n}\n`;
     reg
+  in
+
+  let emit_addr symbol =
+    let temp = make_temp () in
+    `  addr.i64 {emit_temp temp}, {emit_symbol symbol}\n`;
+    temp
   in
 
   let emit_cc cc =
@@ -102,6 +108,10 @@ let emit_linear fast body =
       emit_reg reg;
       if i + 1 <> n then emit_string ", "
     ) regs
+  in
+
+  let emit_temps temps =
+    emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
   in
 
   let emit_label lbl =
@@ -141,16 +151,15 @@ let emit_linear fast body =
   in
 
   let emit_op arg res = function
-    | Imove ->
-      failwith "  move\n"
+    | Imove   -> assert false
     | Ispill  -> assert false
     | Ireload -> assert false
-    | Iconst_int(_) ->
-      failwith "  const_int\n"
+    | Iconst_int(n) ->
+      `  imm.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`;
     | Iconst_float(f) ->
       `  imm.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
-    | Iconst_symbol(_) ->
-      failwith "  const_symbol\n"
+    | Iconst_symbol(s) ->
+      `  addr.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
@@ -176,7 +185,7 @@ let emit_linear fast body =
       `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
       `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}, {emit_regs arg}\n`
     | Istackoffset(_) ->
-      failwith "  stackoffset\n"
+      assert false
     | Iload(size, addr) ->
       let instr = match size with
         | Byte_unsigned      -> "1.u64"
@@ -224,16 +233,14 @@ let emit_linear fast body =
         let gc_ret = new_label () in
         let gc_lbl = new_label () in
         `{emit_label gc_ret}:\n`;
-        let addr_young_lim = make_temp () in
-        let addr_young_ptr = make_temp () in
         let young_lim = make_temp () in
         let young_ptr = make_temp () in
         let new_ptr = make_temp () in
         let flag = make_temp () in
         let immw = emit_const words in
-        `  addr.i64 {emit_temp addr_young_lim}, {emit_symbol "caml_young_limit"}\n`;
+        let addr_young_lim = emit_addr "caml_young_limit" in
+        let addr_young_ptr = emit_addr "caml_young_ptr" in
         `  ld.8.i64 {emit_temp young_lim}, [{emit_temp addr_young_lim}]\n`;
-        `  addr.i64 {emit_temp addr_young_ptr}, {emit_symbol "caml_young_ptr"}\n`;
         `  ld.8.i64 {emit_temp young_ptr}, [{emit_temp addr_young_ptr}]\n`;
         `  sub.i64 {emit_temp new_ptr}, {emit_temp young_ptr}, {emit_temp immw}\n`;
         `  setlt.i64 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
@@ -242,7 +249,16 @@ let emit_linear fast body =
         `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
         gc_sites := { gc_lbl; gc_ret } :: !gc_sites
       end else begin
-        `  TODO: Ialloc\n`;
+        let ptr = make_temp () in
+        let args = match words with
+          | 16 -> [emit_addr "caml_alloc1"]
+          | 24 -> [emit_addr "caml_alloc2"]
+          | 32 -> [emit_addr "caml_alloc3"]
+          | _  -> [emit_addr "caml_allocN"; emit_const words]
+        in
+        `  call.i64 {emit_temp ptr}, {emit_temps args} @caml_call_frame\n`;
+        let imm = emit_const 8 in
+        `  add.i64 {emit_reg res.(0)}, {emit_temp ptr}, {emit_temp imm}\n`;
       end
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) op
@@ -294,9 +310,13 @@ let emit_linear fast body =
     | Lcondbranch(test, label) ->
       (match test with
       | Itruetest ->
-        failwith "  truetest\n"
+        let flag = make_temp () in
+        `  trunc.i32.i64 {emit_temp flag}, {emit_reg arg.(0)}\n`;
+        `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifalsetest ->
-        failwith "  falsetest\n"
+        let flag = make_temp () in
+        `  trunc.i32.i64 {emit_temp flag}, {emit_reg arg.(0)}\n`;
+        `  jf {emit_temp flag}, {emit_label label}\n`
       | Iinttest cc ->
         let flag = make_temp () in
         `  set{emit_cc cc} {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
@@ -360,8 +380,7 @@ let emit_linear fast body =
     | Lraise(raise) ->
       (match raise with
       | Cmm.Raise_withtrace ->
-        let exn = make_temp () in
-        `  addr.i64 {emit_temp exn}, {emit_symbol "caml_raise_exn"}\n`;
+        let exn = emit_addr "caml_raise_exn" in
         `  tcall {emit_temp exn}, {emit_regs arg} @caml_raise_frame\n`;
       | Cmm.Raise_notrace ->
         failwith "Cmm.Raise_notrace"
@@ -377,17 +396,15 @@ let emit_linear fast body =
   (* Emit calls to all GC sites *)
   !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
     `{emit_label gc_lbl}:\n`;
-    let addr = make_temp () in
-    `  addr.i64 {emit_temp addr}, {emit_symbol "caml_call_gc"}\n`;
+    let addr = emit_addr "caml_call_gc" in
     `  call {emit_temp addr} @caml_gc_frame\n`;
     `  jmp {emit_label gc_ret}\n`
   );
 
   (* Emit bound error call *)
   !bound_error_label |> Option.iter (fun label ->
-    let addr = make_temp () in
     `{emit_label label}:\n`;
-    `  addr.i64 {emit_temp addr}, {emit_symbol "caml_ml_array_bound_error"}\n`;
+    let addr = emit_addr "caml_ml_array_bound_error" in
     `  tcall {emit_temp addr}\n`;
   )
 
