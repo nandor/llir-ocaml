@@ -394,7 +394,14 @@ let emit_linear fast body =
         let exn = emit_addr "caml_raise_exn" in
         `  tcall {emit_temp exn}, {emit_regs arg} @caml_raise_frame\n`;
       | Cmm.Raise_notrace ->
-        failwith "Cmm.Raise_notrace"
+        let exc_val = make_temp () in
+        let ret_val = make_temp () in
+        let exc_addr = emit_addr "caml_exception_pointer" in
+        `  ld.8.u64 $sp, [{emit_temp exc_addr}]\n`;
+        `  pop.i64 {emit_temp exc_val}\n`;
+        `  st.8.u64 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
+        `  pop.i64 {emit_temp ret_val}\n`;
+        `  ji {emit_temp ret_val}\n`
       )
   in
   let rec emit = function
