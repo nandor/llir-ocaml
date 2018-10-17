@@ -33,6 +33,7 @@ let emit_symbol s = Emitaux.emit_symbol '_' s
 let emit_float f = emit_string (string_of_float f)
 
 let emit_linear fast body =
+  let bound_error_label = ref None in
   let gc_sites = ref [] in
 
   (* Find the next available virtual register *)
@@ -74,17 +75,17 @@ let emit_linear fast body =
   let emit_cc cc =
     let cc_str = match cc with
       | Isigned   Ceq -> "eq"
-      | Isigned   Cne -> "ne"
-      | Isigned   Clt -> "lt_s"
-      | Isigned   Cgt -> "gt_s"
-      | Isigned   Cle -> "le_s"
-      | Isigned   Cge -> "ge_s"
+      | Isigned   Cne -> "neq"
+      | Isigned   Clt -> "lt.i64"
+      | Isigned   Cgt -> "gt.i64"
+      | Isigned   Cle -> "le.i64"
+      | Isigned   Cge -> "ge.i64"
       | Iunsigned Ceq -> "eq"
-      | Iunsigned Cne -> "ne"
-      | Iunsigned Clt -> "ls_u"
-      | Iunsigned Cgt -> "gt_u"
-      | Iunsigned Cle -> "le_u"
-      | Iunsigned Cge -> "ge_u"
+      | Iunsigned Cne -> "neq"
+      | Iunsigned Clt -> "ls.u64"
+      | Iunsigned Cgt -> "gt.u64"
+      | Iunsigned Cle -> "le.u64"
+      | Iunsigned Cge -> "ge.u64"
     in emit_string cc_str
   in
 
@@ -124,20 +125,30 @@ let emit_linear fast body =
     | Ilsl    -> emit "lsl"
     | Ilsr    -> emit "lsr"
     | Iasr    -> emit "asr"
-    | Icomp _ -> `TODO comp\n`;
+    | Icomp cc ->
+        `  set{emit_cc cc} {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
     | Icheckbound _ ->
-      `TODO: checkbound\n`;
+      let label = match !bound_error_label with
+        | None ->
+          let label = new_label () in
+          bound_error_label := Some label;
+          label
+        | Some label -> label
+      in
+      let flag = make_temp () in
+      `  setle.u64 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
   let emit_op arg res = function
     | Imove ->
       failwith "  move\n"
-    | Ispill -> assert false
+    | Ispill  -> assert false
     | Ireload -> assert false
     | Iconst_int(_) ->
       failwith "  const_int\n"
-    | Iconst_float(_) ->
-      failwith "  const_float\n"
+    | Iconst_float(f) ->
+      `  imm.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(_) ->
       failwith "  const_symbol\n"
     | Icall_ind _ ->
@@ -160,8 +171,10 @@ let emit_linear fast body =
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
+      let wrap = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  call{emit_string types} {emit_temp addr}, {emit_regs arg}\n`
+      `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
+      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}, {emit_regs arg}\n`
     | Istackoffset(_) ->
       failwith "  stackoffset\n"
     | Iload(size, addr) ->
@@ -237,25 +250,25 @@ let emit_linear fast body =
       let imm = emit_const n in
       emit_intop res arg (fun () -> emit_temp imm) op
     | Inegf ->
-      failwith "  negf\n"
+      `  neg.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iabsf ->
-      failwith "  absf\n"
+      `  abs.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iaddf ->
-      failwith "  addf\n"
+      `  add.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Isubf ->
-      failwith "  subf\n"
+      `  sub.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Imulf ->
-      failwith "  mulf\n"
+      `  mul.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Idivf ->
-      failwith "  divf\n"
+      `  div.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Ifloatofint ->
-      failwith "  floatofint\n"
+      `  mov.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iintoffloat ->
-      failwith "  intoffloat\n"
+      `  mov.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Ispecific(_) ->
-      failwith "  specific\n"
+      assert false
     | Iname_for_debugger(_) ->
-      failwith "  name_for_debugger\n"
+      assert false
   in
   let emit_instr arg res = function
     | Lend ->
@@ -291,10 +304,24 @@ let emit_linear fast body =
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
-        `  set{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  set{emit_cc cc} {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
-      | Ifloattest _cmp ->
-        failwith "  floattest\n"
+      | Ifloattest(cc) ->
+        let cond = match cc with
+          | CFeq  -> "eq"
+          | CFneq -> "neq"
+          | CFlt  -> "lt"
+          | CFnlt -> "nlt"
+          | CFgt  -> "gt"
+          | CFngt -> "ngt"
+          | CFle  -> "le"
+          | CFnle -> "nle"
+          | CFge  -> "ge"
+          | CFnge -> "nge"
+        in
+        let flag = make_temp () in
+        `  set{emit_string cond}.f64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  jt {emit_temp flag}, {emit_label label}\n`
       | Ioddtest ->
         let imm = emit_const 1 in
         let flag = make_temp () in
@@ -306,8 +333,16 @@ let emit_linear fast body =
         `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jf {emit_temp flag}, {emit_label label}\n`
       );
-    | Lcondbranch3(_lb1, _lb2, _lb3) ->
-      failwith "  cond_br_3\n"
+    | Lcondbranch3(lbl_lt, lbl_eq, lbl_gt) ->
+        let imm = emit_const 1 in
+        let flag = make_temp () in
+        let emit cc lbl =
+          `  set{emit_string cc}.u64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+          `  jt {emit_temp flag}, {emit_label lbl}\n`
+        in
+        lbl_lt |> Option.iter (emit "lt");
+        lbl_eq |> Option.iter (emit "eq");
+        lbl_gt |> Option.iter (emit "gt")
     | Lswitch(labels) ->
       `  switch {emit_reg arg.(0)}, [\n`;
       let n = Array.length labels in
@@ -317,11 +352,11 @@ let emit_linear fast body =
       ) labels;
       `  ]\n`
     | Lsetuptrap(_label) ->
-      `  TODO: setup_trap\n`
+      `  EXCEPT: setup_trap\n`
     | Lpushtrap ->
-      `  TODO: push_trap\n`
+      `  EXCEPT: push_trap\n`
     | Lpoptrap ->
-      `  TODO: pop_trap\n`
+      `  EXCEPT: pop_trap\n`
     | Lraise(raise) ->
       (match raise with
       | Cmm.Raise_withtrace ->
@@ -339,12 +374,21 @@ let emit_linear fast body =
       emit instr.next
   in
   emit body;
+  (* Emit calls to all GC sites *)
   !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
     `{emit_label gc_lbl}:\n`;
     let addr = make_temp () in
     `  addr.i64 {emit_temp addr}, {emit_symbol "caml_call_gc"}\n`;
     `  call {emit_temp addr} @caml_gc_frame\n`;
     `  jmp {emit_label gc_ret}\n`
+  );
+
+  (* Emit bound error call *)
+  !bound_error_label |> Option.iter (fun label ->
+    let addr = make_temp () in
+    `{emit_label label}:\n`;
+    `  addr.i64 {emit_temp addr}, {emit_symbol "caml_ml_array_bound_error"}\n`;
+    `  tcall {emit_temp addr}\n`;
   )
 
 let data = function

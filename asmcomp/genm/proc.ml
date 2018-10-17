@@ -19,7 +19,7 @@ open Reg
 
 type reg = Arg | Param | Result | Generic
 
-let num_regs = 10000
+let num_regs = 1000
 
 let num_register_classes = 1
 let num_available_registers = [| num_regs |]
