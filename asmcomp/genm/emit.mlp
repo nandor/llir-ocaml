@@ -24,8 +24,6 @@ open Reg
 
 type alloc_site = { gc_lbl: label; gc_ret: label }
 
-let items = ref []
-
 let emit_symbol s = Emitaux.emit_symbol '_' s
 
 let emit_float f = emit_string (string_of_float f)
@@ -426,43 +424,34 @@ let emit_linear fast body =
     `  tcall {emit_temp addr}\n`;
   )
 
-let data = function
-  | [] -> ()
-  | data -> items := List.append !items [data]
+let data items =
+  `  .data\n`;
+  `  .align 3\n`;
+  items |> List.iter (function
+  | Cstring s          -> emit_string_directive "  .ascii  " s
+  | Cskip n            -> if n > 0 then `  .space   {emit_int n}\n`
+  | Cdefine_symbol s   -> `{emit_symbol s}:\n`
+  | Cglobal_symbol s   -> `  .globl   {emit_symbol s}\n`
+  | Calign n           -> `  .align   {emit_int n}\n`
+  | Cint8 n            -> `  .int8    {emit_int n}\n`
+  | Cint16 n           -> `  .int16   {emit_int n}\n`
+  | Cint32 n           -> `  .int32   {emit_int (Nativeint.to_int n)}\n`
+  | Cint n             -> `  .int64   {emit_int (Nativeint.to_int n)}\n`
+  | Csymbol_address s  -> `  .addr    {emit_symbol s}\n`
+  | Csingle f          -> `  .float32 {emit_float f}\n`
+  | Cdouble f          -> `  .float64 {emit_float f}\n`
+  );
+  `\n`
 
 let fundecl f =
-  `\n\nfunction {emit_symbol f.fun_name} \{\n`;
+  `  .text\n`;
+  `  .globl {emit_symbol f.fun_name}\n`;
+  `{emit_symbol f.fun_name}:\n`;
   emit_linear f.fun_fast f.fun_body;
-  `}\n`
+  `\n`
 
 let begin_assembly () =
   ``
 
 let end_assembly () =
-  let globals = ref [] in
-
-  (* Emit a data section with all structures *)
-  `\n\ndata \{`;
-  !items |> List.iter (fun items ->
-      `\n`;
-      items |> List.iter (fun item -> match item with
-      | Cglobal_symbol s   -> globals := s :: !globals
-      | Cstring s          -> emit_string_directive "    string  " s
-      | Cskip n            -> if n > 0 then `    space   {emit_int n}\n`
-      | Cdefine_symbol s   -> `  {emit_symbol s}:\n`
-      | Calign n           -> `    align   {emit_int n}\n`
-      | Cint8 n            -> `    int8    {emit_int n}\n`
-      | Cint16 n           -> `    int16   {emit_int n}\n`
-      | Cint32 n           -> `    int32   {emit_int (Nativeint.to_int n)}\n`
-      | Cint n             -> `    int64   {emit_int (Nativeint.to_int n)}\n`
-      | Csymbol_address s  -> `    addr    {emit_symbol s}\n`
-      | Csingle f          -> `    float32 {emit_float f}\n`
-      | Cdouble f          -> `    float64 {emit_float f}\n`
-      )
-  );
-  `}\n`;
-
-  (* Emit a list of all global symbols *)
-  `\n\nglobals \{\n`;
-  !globals |> List.iter (fun global -> `  {emit_symbol global}\n`);
-  `}\n`
+  ``
