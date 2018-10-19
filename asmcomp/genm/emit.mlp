@@ -24,7 +24,7 @@ open Reg
 
 type alloc_site = { gc_lbl: label; gc_ret: label }
 
-let emit_symbol s = Emitaux.emit_symbol '_' s
+let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
 let emit_float f = emit_string (string_of_float f)
 
@@ -136,7 +136,7 @@ let emit_linear fast body =
     | Ilsr    -> emit "lsr"
     | Iasr    -> emit "asr"
     | Icomp cc ->
-        `  set{emit_cc cc} {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+        `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
     | Icheckbound _ ->
       let label = match !bound_error_label with
         | None ->
@@ -146,7 +146,7 @@ let emit_linear fast body =
         | Some label -> label
       in
       let flag = make_temp () in
-      `  setle.u64 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  cmp.le.u64 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
@@ -243,7 +243,7 @@ let emit_linear fast body =
         `  ld.8.i64 {emit_temp young_lim}, [{emit_temp addr_young_lim}]\n`;
         `  ld.8.i64 {emit_temp young_ptr}, [{emit_temp addr_young_ptr}]\n`;
         `  sub.i64 {emit_temp new_ptr}, {emit_temp young_ptr}, {emit_temp immw}\n`;
-        `  setlt.i64 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
+        `  cmp.lt.i64 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
         `  jt {emit_temp flag}, {emit_label gc_lbl}\n`;
         let imm8 = emit_const 8 in
         `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
@@ -319,12 +319,12 @@ let emit_linear fast body =
         `  jf {emit_temp flag}, {emit_label label}\n`
       | Iinttest cc ->
         let flag = make_temp () in
-        `  set{emit_cc cc} {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
-        `  set{emit_cc cc} {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  cmp.{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifloattest(cc) ->
         let cond = match cc with
@@ -340,7 +340,7 @@ let emit_linear fast body =
           | CFnge -> "nge"
         in
         let flag = make_temp () in
-        `  set{emit_string cond}.f64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_string cond}.f64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ioddtest ->
         let imm = emit_const 1 in
@@ -357,7 +357,7 @@ let emit_linear fast body =
         let imm = emit_const 1 in
         let flag = make_temp () in
         let emit cc lbl =
-          `  set{emit_string cc}.u64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+          `  cmp.{emit_string cc}.u64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
           `  jt {emit_temp flag}, {emit_label lbl}\n`
         in
         lbl_lt |> Option.iter (emit "lt");
@@ -376,7 +376,8 @@ let emit_linear fast body =
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_label lbl}\n`;
       `  push.i64 {emit_temp addr}\n`;
-      `  jmp {emit_label label}\n`
+      `  jmp {emit_label label}\n`;
+      `{emit_label lbl}:\n`
     | Lpushtrap ->
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
