@@ -98,12 +98,16 @@ let emit_linear fast body =
       assert false
   in
 
-  let emit_regs regs =
-    let n = Array.length regs in
-    Array.iteri (fun i reg ->
-      emit_reg reg;
-      if i + 1 <> n then emit_string ", "
-    ) regs
+  let emit_regs regs term =
+    match regs with
+    | [| |] -> ()
+    | regs ->
+      let n = Array.length regs in
+      Array.iteri (fun i reg ->
+        emit_reg reg;
+        if i + 1 <> n then emit_string ", "
+      ) regs;
+      emit_string term
   in
 
   let emit_temps temps =
@@ -159,19 +163,19 @@ let emit_linear fast body =
     | Icall_ind _ ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
-      `  call{emit_string types} {emit_regs res}, {emit_regs arg} @caml_call_frame\n`
+      `  call{emit_string types} {emit_regs res ","} {emit_regs arg ""} @caml_call_frame\n`
     | Icall_imm { func } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  call{emit_string types} {emit_regs res}, {emit_temp addr}, {emit_regs arg} @caml_call_frame\n`
+      `  call{emit_string types} {emit_regs res ","} {emit_temp addr}, {emit_regs arg ""} @caml_call_frame\n`
     | Itailcall_ind(_) ->
-      `  tcall {emit_regs arg}\n`
+      `  tcall {emit_regs arg ""}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall {emit_temp addr}, {emit_regs arg}\n`
+      `  tcall {emit_temp addr}, {emit_regs arg ""}\n`
     | Iextcall { func } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
@@ -179,7 +183,7 @@ let emit_linear fast body =
       let wrap = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}, {emit_regs arg}\n`
+      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}, {emit_regs arg ""}\n`
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
@@ -298,7 +302,7 @@ let emit_linear fast body =
     | Lreturn ->
       let nargs = Array.length arg in
       let types = String.concat "" (List.init nargs (fun _ -> ".i64")) in
-      `  ret{emit_string types} {emit_regs arg}\n`;
+      `  ret{emit_string types} {emit_regs arg ""}\n`;
     | Llabel(label) ->
       `{emit_label label}:\n`
     | Lbranch(label) ->
@@ -360,11 +364,11 @@ let emit_linear fast body =
         lbl_eq |> Option.iter (emit "eq");
         lbl_gt |> Option.iter (emit "gt")
     | Lswitch(labels) ->
-      `  switch {emit_reg arg.(0)}, [\n`;
+      `  switch {emit_reg arg.(0)}, [`;
       let n = Array.length labels in
       Array.iteri (fun i l ->
-        `    {emit_label l}`;
-        if i + 1 <> n then `,\n` else `\n`
+        `{emit_label l}`;
+        if i + 1 <> n then `, ` else ()
       ) labels;
       `  ]\n`
     | Lsetuptrap(label) ->
@@ -390,7 +394,7 @@ let emit_linear fast body =
       (match raise with
       | Cmm.Raise_withtrace ->
         let exn = emit_addr "caml_raise_exn" in
-        `  tcall {emit_temp exn}, {emit_regs arg} @caml_raise_frame\n`;
+        `  tcall {emit_temp exn}, {emit_regs arg ""} @caml_raise_frame\n`;
       | Cmm.Raise_notrace ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
