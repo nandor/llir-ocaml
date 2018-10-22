@@ -26,6 +26,13 @@ type alloc_site = { gc_lbl: label; gc_ret: label }
 
 let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
+let emit_label lbl = emit_string ".L"; emit_int lbl
+
+let emit_global_label s =
+  let lbl = Compilenv.make_symbol (Some s) in
+  `.globl {emit_symbol lbl}\n`;
+  `{emit_symbol lbl}:\n`
+
 let emit_linear fast body =
   let bound_error_label = ref None in
   let gc_sites = ref [] in
@@ -111,10 +118,6 @@ let emit_linear fast body =
 
   let emit_temps temps =
     emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
-  in
-
-  let emit_label lbl =
-    emit_string ".BB"; emit_int lbl
   in
 
   let emit_intop res lhs rhs op =
@@ -433,13 +436,13 @@ let data items =
   `  .align 3\n`;
   items |> List.iter (function
   | Cstring s          -> emit_string_directive "  .ascii  " s
-  | Cskip n            -> if n > 0 then `  .space   {emit_int n}\n`
+  | Cskip n            -> if n > 0 then `  .zero   {emit_int n}\n`
   | Cdefine_symbol s   -> `{emit_symbol s}:\n`
   | Cglobal_symbol s   -> `  .globl   {emit_symbol s}\n`
   | Calign n           -> `  .align   {emit_int n}\n`
   | Cint8 n            -> `  .byte    {emit_int n}\n`
   | Cint16 n           -> `  .short   {emit_int n}\n`
-  | Cint32 n           -> `  .word    {emit_int (Nativeint.to_int n)}\n`
+  | Cint32 n           -> `  .long    {emit_int (Nativeint.to_int n)}\n`
   | Cint n             -> `  .quad    {emit_int (Nativeint.to_int n)}\n`
   | Csymbol_address s  -> `  .quad    {emit_symbol s}\n`
   | Csingle f          -> `  .float   {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
@@ -455,7 +458,15 @@ let fundecl f =
   `\n`
 
 let begin_assembly () =
-  ``
+  `  .data\n`;
+  emit_global_label "data_begin";
+  `  .text\n`;
+  emit_global_label "code_begin"
 
 let end_assembly () =
-  ``
+  `  .data\n`;
+  emit_global_label "data_end";
+  `  .text\n`;
+  emit_global_label "code_end";
+  `  .align 8\n`
+
