@@ -26,8 +26,6 @@ type alloc_site = { gc_lbl: label; gc_ret: label }
 
 let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
-let emit_float f = emit_string (string_of_float f)
-
 let emit_linear fast body =
   let bound_error_label = ref None in
   let gc_sites = ref [] in
@@ -98,16 +96,17 @@ let emit_linear fast body =
       assert false
   in
 
-  let emit_regs regs term =
+  let emit_regs regs st en =
     match regs with
     | [| |] -> ()
     | regs ->
+      emit_string st;
       let n = Array.length regs in
       Array.iteri (fun i reg ->
         emit_reg reg;
         if i + 1 <> n then emit_string ", "
       ) regs;
-      emit_string term
+      emit_string en
   in
 
   let emit_temps temps =
@@ -163,19 +162,19 @@ let emit_linear fast body =
     | Icall_ind _ ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
-      `  call{emit_string types} {emit_regs res ","} {emit_regs arg ""} @caml_call_frame\n`
+      `  call{emit_string types}{emit_regs res " " ","}{emit_regs arg " " ""} @caml_call_frame\n`
     | Icall_imm { func } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  call{emit_string types} {emit_regs res ","} {emit_temp addr}, {emit_regs arg ""} @caml_call_frame\n`
+      `  call{emit_string types}{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """} @caml_call_frame\n`
     | Itailcall_ind(_) ->
-      `  tcall {emit_regs arg ""}\n`
+      `  tcall{emit_regs arg " " ""}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall {emit_temp addr}, {emit_regs arg ""}\n`
+      `  tcall {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
@@ -183,7 +182,7 @@ let emit_linear fast body =
       let wrap = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}, {emit_regs arg ""}\n`
+      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
@@ -302,7 +301,7 @@ let emit_linear fast body =
     | Lreturn ->
       let nargs = Array.length arg in
       let types = String.concat "" (List.init nargs (fun _ -> ".i64")) in
-      `  ret{emit_string types} {emit_regs arg ""}\n`;
+      `  ret{emit_string types}{emit_regs arg " " ""}\n`;
     | Llabel(label) ->
       `{emit_label label}:\n`
     | Lbranch(label) ->
@@ -395,7 +394,7 @@ let emit_linear fast body =
       (match raise with
       | Cmm.Raise_withtrace ->
         let exn = emit_addr "caml_raise_exn" in
-        `  tcall {emit_temp exn}, {emit_regs arg ""} @caml_raise_frame\n`;
+        `  tcall {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
       | Cmm.Raise_notrace ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
@@ -440,11 +439,11 @@ let data items =
   | Calign n           -> `  .align   {emit_int n}\n`
   | Cint8 n            -> `  .byte    {emit_int n}\n`
   | Cint16 n           -> `  .short   {emit_int n}\n`
-  | Cint32 n           -> `  .long    {emit_int (Nativeint.to_int n)}\n`
+  | Cint32 n           -> `  .word    {emit_int (Nativeint.to_int n)}\n`
   | Cint n             -> `  .quad    {emit_int (Nativeint.to_int n)}\n`
   | Csymbol_address s  -> `  .addr    {emit_symbol s}\n`
-  | Csingle f          -> `  .float   {emit_float f}\n`
-  | Cdouble f          -> `  .double  {emit_float f}\n`
+  | Csingle f          -> `  .float   {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
+  | Cdouble f          -> `  .double  {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
   );
   `\n`
 
