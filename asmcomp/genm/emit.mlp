@@ -364,13 +364,13 @@ let emit_linear fast body =
         lbl_eq |> Option.iter (emit "eq");
         lbl_gt |> Option.iter (emit "gt")
     | Lswitch(labels) ->
-      `  switch {emit_reg arg.(0)}, [`;
+      `  switch {emit_reg arg.(0)}, `;
       let n = Array.length labels in
       Array.iteri (fun i l ->
         `{emit_label l}`;
         if i + 1 <> n then `, ` else ()
       ) labels;
-      `  ]\n`
+      `\n`
     | Lsetuptrap(label) ->
       let lbl = new_label () in
       let addr = make_temp () in
@@ -438,13 +438,13 @@ let data items =
   | Cdefine_symbol s   -> `{emit_symbol s}:\n`
   | Cglobal_symbol s   -> `  .globl   {emit_symbol s}\n`
   | Calign n           -> `  .align   {emit_int n}\n`
-  | Cint8 n            -> `  .int8    {emit_int n}\n`
-  | Cint16 n           -> `  .int16   {emit_int n}\n`
-  | Cint32 n           -> `  .int32   {emit_int (Nativeint.to_int n)}\n`
-  | Cint n             -> `  .int64   {emit_int (Nativeint.to_int n)}\n`
+  | Cint8 n            -> `  .byte    {emit_int n}\n`
+  | Cint16 n           -> `  .short   {emit_int n}\n`
+  | Cint32 n           -> `  .long    {emit_int (Nativeint.to_int n)}\n`
+  | Cint n             -> `  .quad    {emit_int (Nativeint.to_int n)}\n`
   | Csymbol_address s  -> `  .addr    {emit_symbol s}\n`
-  | Csingle f          -> `  .float32 {emit_float f}\n`
-  | Cdouble f          -> `  .float64 {emit_float f}\n`
+  | Csingle f          -> `  .float   {emit_float f}\n`
+  | Cdouble f          -> `  .double  {emit_float f}\n`
   );
   `\n`
 
