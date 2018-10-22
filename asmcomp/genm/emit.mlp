@@ -441,7 +441,7 @@ let data items =
   | Cint16 n           -> `  .short   {emit_int n}\n`
   | Cint32 n           -> `  .word    {emit_int (Nativeint.to_int n)}\n`
   | Cint n             -> `  .quad    {emit_int (Nativeint.to_int n)}\n`
-  | Csymbol_address s  -> `  .addr    {emit_symbol s}\n`
+  | Csymbol_address s  -> `  .quad    {emit_symbol s}\n`
   | Csingle f          -> `  .float   {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
   | Cdouble f          -> `  .double  {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
   );
