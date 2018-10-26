@@ -468,5 +468,4 @@ let end_assembly () =
   emit_global_label "data_end";
   `  .text\n`;
   emit_global_label "code_end";
-  `  .align 8\n`
 
