@@ -185,7 +185,7 @@ let emit_linear fast body =
       let wrap = make_temp () in
       `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-      `  call{emit_string types} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}\n`
+      `  call{emit_string types}{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
