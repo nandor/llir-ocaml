@@ -213,13 +213,13 @@ let emit_linear fast body =
       )
     | Istore(size, addr, _) ->
       let instr = match size with
-        | Byte_unsigned      | Byte_signed        -> "1.i64"
-        | Sixteen_unsigned   | Sixteen_signed     -> "2.i64"
-        | Thirtytwo_unsigned | Thirtytwo_signed   -> "4.i64"
-        | Word_int           | Word_val           -> "8.i64"
-        | Single   -> "8.f32"
-        | Double   -> "8.f64"
-        | Double_u -> "8.f64"
+        | Byte_unsigned      | Byte_signed        -> "1"
+        | Sixteen_unsigned   | Sixteen_signed     -> "2"
+        | Thirtytwo_unsigned | Thirtytwo_signed   -> "4"
+        | Word_int           | Word_val           -> "8"
+        | Single   -> "8"
+        | Double   -> "8"
+        | Double_u -> "8"
       in
       (match addr with
       | Iindexed(0) ->
@@ -385,13 +385,13 @@ let emit_linear fast body =
       let exc_val = make_temp () in
       `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
       `  push.i64 {emit_temp exc_val}\n`;
-      `  st.8.u64 [{emit_temp exc_addr}], $sp\n`
+      `  st.8 [{emit_temp exc_addr}], $sp\n`
     | Lpoptrap ->
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
       let dsc_val = make_temp () in
       `  pop.i64 {emit_temp exc_val}\n`;
-      `  st.8.u64 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
+      `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
       `  pop.i64 {emit_temp dsc_val}\n`
     | Lraise(raise) ->
       (match raise with
@@ -406,7 +406,7 @@ let emit_linear fast body =
         `  ld.8.u64 {emit_temp sp_val}, [{emit_temp exc_addr}]\n`;
         `  set.i64 $sp, {emit_temp sp_val}\n`;
         `  pop.i64 {emit_temp exc_val}\n`;
-        `  st.8.u64 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
+        `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
         `  pop.i64 {emit_temp ret_val}\n`;
         `  ji {emit_temp ret_val}\n`
       )
