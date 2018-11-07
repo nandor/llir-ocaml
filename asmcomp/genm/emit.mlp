@@ -83,16 +83,16 @@ let emit_linear fast body =
     let cc_str = match cc with
       | Isigned   Ceq -> "eq"
       | Isigned   Cne -> "neq"
-      | Isigned   Clt -> "lt.i64"
-      | Isigned   Cgt -> "gt.i64"
-      | Isigned   Cle -> "le.i64"
-      | Isigned   Cge -> "ge.i64"
+      | Isigned   Clt -> "lt"
+      | Isigned   Cgt -> "gt"
+      | Isigned   Cle -> "le"
+      | Isigned   Cge -> "ge"
       | Iunsigned Ceq -> "eq"
       | Iunsigned Cne -> "neq"
-      | Iunsigned Clt -> "ls.u64"
-      | Iunsigned Cgt -> "gt.u64"
-      | Iunsigned Cle -> "le.u64"
-      | Iunsigned Cge -> "ge.u64"
+      | Iunsigned Clt -> "uls"
+      | Iunsigned Cgt -> "ugt"
+      | Iunsigned Cle -> "ule"
+      | Iunsigned Cge -> "uge"
     in emit_string cc_str
   in
 
@@ -148,7 +148,7 @@ let emit_linear fast body =
         | Some label -> label
       in
       let flag = make_temp () in
-      `  cmp.le.u64 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  cmp.le.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
@@ -245,7 +245,7 @@ let emit_linear fast body =
         `  ld.8.i64 {emit_temp young_lim}, [{emit_temp addr_young_lim}]\n`;
         `  ld.8.i64 {emit_temp young_ptr}, [{emit_temp addr_young_ptr}]\n`;
         `  sub.i64 {emit_temp new_ptr}, {emit_temp young_ptr}, {emit_temp immw}\n`;
-        `  cmp.lt.i64 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
+        `  cmp.lt.i32 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
         `  jt {emit_temp flag}, {emit_label gc_lbl}\n`;
         let imm8 = emit_const 8 in
         `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
@@ -321,28 +321,28 @@ let emit_linear fast body =
         `  jf {emit_temp flag}, {emit_label label}\n`
       | Iinttest cc ->
         let flag = make_temp () in
-        `  cmp.{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_cc cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
-        `  cmp.{emit_cc cc}.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  cmp.{emit_cc cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifloattest(cc) ->
         let cond = match cc with
-          | CFeq  -> "eq"
-          | CFneq -> "neq"
-          | CFlt  -> "lt"
-          | CFnlt -> "nlt"
-          | CFgt  -> "gt"
-          | CFngt -> "ngt"
-          | CFle  -> "le"
-          | CFnle -> "nle"
-          | CFge  -> "ge"
-          | CFnge -> "nge"
+          | CFeq  -> "oeq"
+          | CFneq -> "une"
+          | CFlt  -> "olt"
+          | CFnlt -> "ugt"
+          | CFgt  -> "ogt"
+          | CFngt -> "ule"
+          | CFle  -> "ole"
+          | CFnle -> "ugt"
+          | CFge  -> "oge"
+          | CFnge -> "ult"
         in
         let flag = make_temp () in
-        `  cmp.{emit_string cond}.f64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_string cond}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ioddtest ->
         let imm = emit_const 1 in
@@ -359,7 +359,7 @@ let emit_linear fast body =
         let imm = emit_const 1 in
         let flag = make_temp () in
         let emit cc lbl =
-          `  cmp.{emit_string cc}.u64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+          `  cmp.{emit_string cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
           `  jt {emit_temp flag}, {emit_label lbl}\n`
         in
         lbl_lt |> Option.iter (emit "lt");
