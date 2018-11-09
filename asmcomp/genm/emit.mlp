@@ -145,7 +145,7 @@ let emit_linear fast body =
     | Imul    -> emit "mul"
     | Imulh   -> emit "mulh"
     | Idiv    -> emit "div"
-    | Imod    -> emit "mod"
+    | Imod    -> emit "rem"
     | Iand    -> emit "and"
     | Ior     -> emit "or"
     | Ixor    -> emit "xor"
