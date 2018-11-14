@@ -60,6 +60,7 @@ let emit_linear fast body =
     if i.desc <> Lend then find_regs i.next
   in
   find_regs body;
+  `  .args {emit_int (Hashtbl.length params)}\n`;
   params |> Hashtbl.iter (fun arg idx ->
     `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
   );
