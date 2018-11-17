@@ -415,9 +415,11 @@ let emit_linear fast body =
       handlers := !last_trap :: !handlers;
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
+      let sp_val = make_temp () in
       `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
       `  push.i64 {emit_temp exc_val}\n`;
-      `  st.8 [{emit_temp exc_addr}], $sp\n`
+      `  mov.i64 {emit_temp sp_val}, $sp\n`;
+      `  st.8 [{emit_temp exc_addr}], {emit_temp sp_val}\n`
     | Lpoptrap ->
       handlers := List.tl !handlers;
       let exc_addr = emit_addr "caml_exception_pointer" in
