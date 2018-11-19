@@ -76,7 +76,7 @@ let emit_linear fast body =
 
   let emit_addr symbol =
     let temp = make_temp () in
-    `  addr.i64 {emit_temp temp}, {emit_symbol symbol}\n`;
+    `  mov.i64 {emit_temp temp}, {emit_symbol symbol}\n`;
     temp
   in
 
@@ -189,7 +189,7 @@ let emit_linear fast body =
     | Iconst_float(f) ->
       `  imm.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(s) ->
-      `  addr.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
@@ -198,21 +198,21 @@ let emit_linear fast body =
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
-      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  {emit_call !handlers}{emit_string types}{emit_regs res " " ","} ocaml, {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame\n`
     | Itailcall_ind(_) ->
       `  tcall ocaml,{emit_regs arg " " ""}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
-      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  tcall ocaml, {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
       let wrap = make_temp () in
-      `  addr.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  addr.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
+      `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
+      `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
       `  {emit_call !handlers}{emit_string types}{emit_regs res " " ","} c, {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
     | Istackoffset(_) ->
       assert false
@@ -325,7 +325,7 @@ let emit_linear fast body =
     | Lop(Iconst_int n) ->
       `  imm.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`
     | Lop(Iconst_symbol s) ->
-      `  addr.i64 {emit_reg res.(0)}, {emit_symbol s}\n`
+      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`
     | Lop(op) ->
       emit_op arg res op
     | Lreloadretaddr ->
@@ -406,7 +406,7 @@ let emit_linear fast body =
       let lbl = new_label () in
       let addr = make_temp () in
       last_trap := lbl;
-      `  addr.i64 {emit_temp addr}, {emit_label lbl}\n`;
+      `  mov.i64 {emit_temp addr}, {emit_label lbl}\n`;
       `  push.i64 {emit_temp addr}\n`;
       `  jmp {emit_label label}\n`;
       `{emit_label lbl}:\n`
