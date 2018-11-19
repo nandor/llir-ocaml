@@ -23,7 +23,7 @@ _caml_system__code_begin:
   .text
   .globl _caml_alloc1
 _caml_alloc1:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -32,7 +32,7 @@ _caml_alloc1:
   .text
   .globl _caml_alloc2
 _caml_alloc2:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -41,7 +41,7 @@ _caml_alloc2:
   .text
   .globl _caml_alloc3
 _caml_alloc3:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -50,7 +50,7 @@ _caml_alloc3:
   .text
   .globl _caml_allocN
 _caml_allocN:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -59,7 +59,7 @@ _caml_allocN:
   .text
   .globl _caml_c_call
 _caml_c_call:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -68,7 +68,7 @@ _caml_c_call:
   .text
   .globl _caml_call_gc
 _caml_call_gc:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -77,7 +77,7 @@ _caml_call_gc:
   .text
   .globl _caml_ml_array_bound_error
 _caml_ml_array_bound_error:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -86,7 +86,7 @@ _caml_ml_array_bound_error:
   .text
   .globl _caml_raise_exn
 _caml_raise_exn:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 
@@ -96,7 +96,7 @@ _caml_raise_exn:
   .text
   .globl _caml_callback2_exn
 _caml_callback2_exn:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -105,7 +105,7 @@ _caml_callback2_exn:
   .text
   .globl _caml_callback3_exn
 _caml_callback3_exn:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -114,7 +114,7 @@ _caml_callback3_exn:
   .text
   .globl _caml_callback_exn
 _caml_callback_exn:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -123,7 +123,7 @@ _caml_callback_exn:
   .text
   .globl _caml_raise_exception
 _caml_raise_exception:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -132,7 +132,7 @@ _caml_raise_exception:
   .text
   .globl _caml_start_program
 _caml_start_program:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
 ################################################################################
@@ -141,7 +141,7 @@ _caml_start_program:
   .text
   .globl _caml_stack_overflow
 _caml_stack_overflow:
-  imm.i64 $0, 0
+  mov.i64 $0, 0
   ret $0
 
   .text
