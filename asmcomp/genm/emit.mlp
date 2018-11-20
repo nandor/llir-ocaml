@@ -83,13 +83,13 @@ let emit_linear fast body =
   let emit_cc cc =
     let cc_str = match cc with
       | Isigned   Ceq -> "eq"
-      | Isigned   Cne -> "neq"
+      | Isigned   Cne -> "ne"
       | Isigned   Clt -> "lt"
       | Isigned   Cgt -> "gt"
       | Isigned   Cle -> "le"
       | Isigned   Cge -> "ge"
       | Iunsigned Ceq -> "eq"
-      | Iunsigned Cne -> "neq"
+      | Iunsigned Cne -> "ne"
       | Iunsigned Clt -> "uls"
       | Iunsigned Cgt -> "ugt"
       | Iunsigned Cle -> "ule"
