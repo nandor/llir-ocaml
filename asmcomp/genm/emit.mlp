@@ -206,14 +206,18 @@ let emit_linear fast body =
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  tcall.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
-    | Iextcall { func } ->
+    | Iextcall { func; alloc } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
-      let wrap = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-      `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
+      if alloc then begin
+        let wrap = make_temp () in
+        `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
+        `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
+      end else begin
+        `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
+      end
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
