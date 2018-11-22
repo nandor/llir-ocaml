@@ -201,11 +201,11 @@ let emit_linear fast body =
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame\n`
     | Itailcall_ind(_) ->
-      `  tcall.ocaml {emit_regs arg " " ""}\n`
+      `  tcall.i64.ocaml {emit_regs arg " " ""}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
+      `  tcall.i64.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func; alloc } ->
       let nres = Array.length res in
       let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
