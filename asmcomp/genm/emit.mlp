@@ -59,11 +59,6 @@ let emit_linear fast body =
     i.res |> Array.iter max_reg;
     if i.desc <> Lend then find_regs i.next
   in
-  find_regs body;
-  `  .args {emit_int (Hashtbl.length params)}, 0\n`;
-  params |> Hashtbl.iter (fun arg idx ->
-    `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
-  );
 
   let make_temp () = let n = !next_reg in next_reg := n + 1; n in
   let emit_temp n = emit_string ("$" ^ (string_of_int n)) in
@@ -408,30 +403,45 @@ let emit_linear fast body =
       `\n`
     | Lsetuptrap(label) ->
       let lbl = new_label () in
-      let addr = make_temp () in
+      let exn_addr = make_temp () in
+      let jmp_frame = make_temp () in
+      let val_addr = make_temp () in
+      let trap_idx = List.length !handlers * 3 * 8 in
       last_trap := lbl;
-      `  mov.i64 {emit_temp addr}, {emit_label lbl}\n`;
-      `  push.i64 {emit_temp addr}\n`;
+      `  mov.i64 {emit_temp exn_addr}, {emit_label lbl}\n`;
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int (trap_idx + 0)}\n`;
+      `  st.8 [{emit_temp jmp_frame}], {emit_temp exn_addr}\n`;
       `  jmp {emit_label label}\n`;
-      `{emit_label lbl}:\n`
+      `{emit_label lbl}:\n`;
+      `  mov.i64 {emit_temp val_addr}, _caml_exn_val\n`;
+      `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
     | Lpushtrap ->
       assert (!last_trap <> 0);
+      let trap_idx = List.length !handlers * 3 * 8 in
       handlers := !last_trap :: !handlers;
       let exc_addr = emit_addr "caml_exception_pointer" in
+      let jmp_frame = make_temp () in
+      let sp_frame = make_temp () in
+      let exc_frame = make_temp () in
       let exc_val = make_temp () in
       let sp_val = make_temp () in
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int (trap_idx + 0)}\n`;
+      `  frame.i64 {emit_temp sp_frame}, {emit_int (trap_idx + 8)}\n`;
+      `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
       `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
-      `  push.i64 {emit_temp exc_val}\n`;
+      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_val}\n`;
       `  mov.i64 {emit_temp sp_val}, $sp\n`;
-      `  st.8 [{emit_temp exc_addr}], {emit_temp sp_val}\n`
+      `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
+      `  st.8 [{emit_temp exc_addr}], {emit_temp jmp_frame}\n`
     | Lpoptrap ->
       handlers := List.tl !handlers;
+      let trap_idx = List.length !handlers * 3 * 8 in
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
-      let dsc_val = make_temp () in
-      `  pop.i64 {emit_temp exc_val}\n`;
-      `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
-      `  pop.i64 {emit_temp dsc_val}\n`
+      let exc_frame = make_temp () in
+      `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
+      `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
+      `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
     | Lraise(raise)->
       (match raise with
       | Cmm.Raise_withtrace ->
@@ -440,13 +450,28 @@ let emit_linear fast body =
       | Cmm.Raise_notrace when no_handler () ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
-        let sp_val = make_temp () in
+        let jmp_frame = make_temp () in
+        let sp_frame = make_temp () in
+        let exc_frame = make_temp () in
+        let next_sp = make_temp () in
+        let offset = emit_const 8 in
         let exc_addr = emit_addr "caml_exception_pointer" in
-        `  ld.8.u64 {emit_temp sp_val}, [{emit_temp exc_addr}]\n`;
-        `  set.i64 $sp, {emit_temp sp_val}\n`;
-        `  pop.i64 {emit_temp exc_val}\n`;
+        let val_addr = emit_addr "caml_exn_val" in
+
+        (* Store the exception being raised. *)
+        `  st.i64 [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
+
+        `  ld.8.i64 {emit_temp jmp_frame}, [{emit_temp exc_addr}]\n`;
+        `  sub.i64 {emit_temp sp_frame}, {emit_temp jmp_frame}, {emit_temp offset}\n`;
+        `  sub.i64 {emit_temp exc_frame}, {emit_temp sp_frame}, {emit_temp offset}\n`;
+
+        `  ld.8.i64 {emit_temp next_sp}, [{emit_temp sp_frame}]\n`;
+        `  set.i64 $sp, {emit_temp next_sp}\n`;
+
+        `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
         `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
-        `  pop.i64 {emit_temp ret_val}\n`;
+
+        `  ld.8.i64 {emit_temp ret_val}, [{emit_temp jmp_frame}]\n`;
         `  ji {emit_temp ret_val}\n`
       | Cmm.Raise_notrace ->
         (* TODO: not implemented *)
@@ -459,7 +484,26 @@ let emit_linear fast body =
       emit_instr instr.arg instr.res instr.desc;
       emit instr.next
   in
+
+  let rec sizeof_frame n m = function
+    | { desc = Lend } -> m
+    | { desc = Lpushtrap; next } -> sizeof_frame (n + 1) (max (n + 1) m) next
+    | { desc = Lpoptrap; next } -> sizeof_frame (n - 1) m next
+    | { next } -> sizeof_frame n m next
+  in
+
+  let frame_size = 8 * 3 * sizeof_frame 0 0 body in
+  if frame_size <> 0 then
+    `  .stack {emit_int frame_size}\n`;
+
+  find_regs body;
+  `  .args {emit_int (Hashtbl.length params)}, 0\n`;
+  params |> Hashtbl.iter (fun arg idx ->
+    `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
+  );
+
   emit body;
+
   (* Emit calls to all GC sites *)
   !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
     `{emit_label gc_lbl}:\n`;

@@ -52,7 +52,7 @@ let max_register_pressure _arg = [| 13; 13 |]
 
 let max_arguments_for_tailcalls  = 10
 let loc_spacetime_node_hole = Reg.dummy
-let loc_exn_bucket = phys_reg 0
+let loc_exn_bucket = phys_reg 2000
 
 
 let loc_arguments arg =

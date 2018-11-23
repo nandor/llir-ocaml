@@ -89,6 +89,10 @@ _caml_raise_exn:
   mov.i64 $0, 0
   ret $0
 
+  .data
+  .globl _caml_exn_val
+_caml_exn_val:
+  .quad 0
 
 ################################################################################
 # caml_callback2_exn
