@@ -12,10 +12,6 @@
 #                                                                              #
 ################################################################################
 
-  .text
-  .globl _caml_system__code_begin
-_caml_system__code_begin:
-
 
 ################################################################################
 # caml_alloc1
@@ -136,6 +132,7 @@ _caml_raise_exception:
   .text
   .globl _caml_start_program
 _caml_start_program:
+.L107:
   mov.i64 $0, 0
   ret $0
 
@@ -148,6 +145,17 @@ _caml_stack_overflow:
   mov.i64 $0, 0
   ret $0
 
-  .text
-  .globl _caml_system__code_end
-_caml_system__code_end:
+
+################################################################################
+  .data
+  .globl  _caml_system__frametable
+  .align  8
+_caml_system__frametable:
+  .quad   1           # one descriptor */
+  .quad   .L107       # return address into callback */
+  .quad   -1          # negative frame size => use callback link */
+  .quad   0           # no roots here */
+  .align  8
+  .quad   16
+  .quad   0
+  .ascii "amd64.S"

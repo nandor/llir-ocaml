@@ -26,6 +26,13 @@ type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: int list }
 
 let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
+let rec pow a = function
+  | 0 -> 1
+  | 1 -> a
+  | n ->
+    let b = pow a (n / 2) in
+    if n mod 2 = 0 then b * b else b * b * a
+
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
 let emit_global_label s =
@@ -459,7 +466,7 @@ let emit_linear fast body =
         let val_addr = emit_addr "caml_exn_val" in
 
         (* Store the exception being raised. *)
-        `  st.i64 [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
+        `  st.8 [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
 
         `  ld.8.i64 {emit_temp jmp_frame}, [{emit_temp exc_addr}]\n`;
         `  sub.i64 {emit_temp sp_frame}, {emit_temp jmp_frame}, {emit_temp offset}\n`;
@@ -529,7 +536,7 @@ let data items =
   | Cskip n            -> if n > 0 then `  .zero   {emit_int n}\n`
   | Cdefine_symbol s   -> `{emit_symbol s}:\n`
   | Cglobal_symbol s   -> `  .globl   {emit_symbol s}\n`
-  | Calign n           -> `  .align   {emit_int n}\n`
+  | Calign n           -> `  .align   {emit_int (pow 2 n)}\n`
   | Cint8 n            -> `  .byte    {emit_int n}\n`
   | Cint16 n           -> `  .short   {emit_int n}\n`
   | Cint32 n           -> `  .long    {emit_int (Nativeint.to_int n)}\n`
