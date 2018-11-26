@@ -49,12 +49,16 @@ let emit_linear fast body =
   let params = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
-      | { loc = Reg r } ->
+      | { loc = Reg r; typ } ->
+        let ty = match typ with
+          | Val | Int | Addr -> "i64"
+          | Float -> "f64"
+        in
         let n =  Proc.num_available_registers.(0) in
         if r >= n then begin
           match r land 7 with
           | 0 -> (* argument *) ()
-          | 1 -> (* param *)    Hashtbl.replace params r ((r - n) lsr 3)
+          | 1 -> (* param *)    Hashtbl.replace params r (((r - n) lsr 3), ty)
           | 2 -> (* result *)   ()
           | _ -> assert false
         end else
@@ -504,9 +508,14 @@ let emit_linear fast body =
     `  .stack {emit_int frame_size}\n`;
 
   find_regs body;
-  `  .args {emit_int (Hashtbl.length params)}, 0\n`;
-  params |> Hashtbl.iter (fun arg idx ->
-    `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
+  let arg_list = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) (
+      Hashtbl.fold (fun arg (idx, ty) acc -> (idx, arg, ty) :: acc) params []
+  ) in
+  `  .args 0`;
+  arg_list |> List.iter (fun (_, _, ty) -> `, {emit_string ty}`);
+  `\n`;
+  arg_list |> List.iter (fun (idx, arg, ty) ->
+    `  arg.{emit_string ty} ${emit_int arg}, {emit_int idx}\n`
   );
 
   emit body;
