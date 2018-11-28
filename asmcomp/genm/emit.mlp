@@ -542,7 +542,7 @@ let data items =
   `  .align 3\n`;
   items |> List.iter (function
   | Cstring s          -> emit_string_directive "  .ascii  " s
-  | Cskip n            -> if n > 0 then `  .zero   {emit_int n}\n`
+  | Cskip n            -> if n > 0 then `  .space   {emit_int n}\n`
   | Cdefine_symbol s   -> `{emit_symbol s}:\n`
   | Cglobal_symbol s   -> `  .globl   {emit_symbol s}\n`
   | Calign n           -> `  .align   {emit_int (pow 2 n)}\n`
