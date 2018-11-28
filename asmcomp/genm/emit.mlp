@@ -539,7 +539,7 @@ let emit_linear fast body =
 
 let data items =
   `  .data\n`;
-  `  .align 3\n`;
+  `  .align 8\n`;
   items |> List.iter (function
   | Cstring s          -> emit_string_directive "  .ascii  " s
   | Cskip n            -> if n > 0 then `  .space   {emit_int n}\n`
