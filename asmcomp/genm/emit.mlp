@@ -455,9 +455,12 @@ let emit_linear fast body =
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
     | Lraise(raise)->
       (match raise with
-      | Cmm.Raise_withtrace ->
+      | Cmm.Raise_withtrace when no_handler () ->
         let exn = emit_addr "caml_raise_exn" in
         `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
+      | Cmm.Raise_withtrace ->
+        let exn = emit_addr "caml_raise_exn" in
+        `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
       | Cmm.Raise_notrace when no_handler () ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
