@@ -19,8 +19,7 @@
   .text
   .globl _caml_alloc1
 _caml_alloc1:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_alloc2
@@ -28,8 +27,7 @@ _caml_alloc1:
   .text
   .globl _caml_alloc2
 _caml_alloc2:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_alloc3
@@ -37,8 +35,7 @@ _caml_alloc2:
   .text
   .globl _caml_alloc3
 _caml_alloc3:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_allocN
@@ -46,8 +43,7 @@ _caml_alloc3:
   .text
   .globl _caml_allocN
 _caml_allocN:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_c_call
@@ -55,8 +51,7 @@ _caml_allocN:
   .text
   .globl _caml_c_call
 _caml_c_call:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_call_gc
@@ -64,8 +59,7 @@ _caml_c_call:
   .text
   .globl _caml_call_gc
 _caml_call_gc:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_ml_array_bound_error
@@ -73,8 +67,7 @@ _caml_call_gc:
   .text
   .globl _caml_ml_array_bound_error
 _caml_ml_array_bound_error:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_raise_exn
@@ -82,8 +75,7 @@ _caml_ml_array_bound_error:
   .text
   .globl _caml_raise_exn
 _caml_raise_exn:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
   .data
   .globl _caml_exn_val
@@ -96,8 +88,7 @@ _caml_exn_val:
   .text
   .globl _caml_callback2_exn
 _caml_callback2_exn:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_callback3_exn
@@ -105,8 +96,7 @@ _caml_callback2_exn:
   .text
   .globl _caml_callback3_exn
 _caml_callback3_exn:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_callback_exn
@@ -114,8 +104,7 @@ _caml_callback3_exn:
   .text
   .globl _caml_callback_exn
 _caml_callback_exn:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_stack_overflow
@@ -123,8 +112,7 @@ _caml_callback_exn:
   .text
   .globl _caml_raise_exception
 _caml_raise_exception:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_start_program
@@ -133,8 +121,7 @@ _caml_raise_exception:
   .globl _caml_start_program
 _caml_start_program:
 .L107:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 ################################################################################
 # caml_stack_overflow
@@ -142,8 +129,7 @@ _caml_start_program:
   .text
   .globl _caml_stack_overflow
 _caml_stack_overflow:
-  mov.i64 $0, 0
-  ret $0
+  trap
 
 
 ################################################################################
