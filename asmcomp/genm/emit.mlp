@@ -524,7 +524,7 @@ let emit_linear fast body =
   !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
     `{emit_label gc_lbl}:\n`;
     let addr = emit_addr "caml_call_gc" in
-    `  call.c {emit_temp addr} @caml_gc_frame\n`;
+    `  call.c {emit_temp addr} @caml_call_frame\n`;
     `  jmp {emit_label gc_ret}\n`
   );
 
