@@ -26,6 +26,11 @@ type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: int list }
 
 let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
+(* Flag to enable inlining small allocations *)
+let inline_alloc = ref false
+(* Flag to enable inlining exception throwing statements *)
+let inline_raise = ref false
+
 let rec pow a = function
   | 0 -> 1
   | 1 -> a
@@ -142,8 +147,15 @@ let emit_linear fast body =
     | h :: _ -> `, {emit_label h}`
   in
 
-  let emit_intop res lhs rhs = function
-    | Imulh ->
+  let emit_intop res lhs rhs op =
+    let emit inst =
+      `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`
+    in
+    match op with
+    | Iadd    -> emit "add"
+    | Isub    -> emit "sub"
+    | Imul    -> emit "mul"
+    | Imulh   ->
       let rega = make_temp () in
       let regb = make_temp () in
       let regr = make_temp () in
@@ -152,38 +164,29 @@ let emit_linear fast body =
       `  mul.i128 {emit_temp regr}, {emit_temp rega}, {emit_temp regb}\n`;
       `  shr.i128 {emit_temp regr}, {emit_temp regr}, 64\n`;
       `  trunc.i64 {emit_reg res.(0)}, {emit_temp regr}\n`
-    | op ->
-      let emit inst =
-        `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`
+    | Idiv    -> emit "div"
+    | Imod    -> emit "rem"
+    | Iand    -> emit "and"
+    | Ior     -> emit "or"
+    | Ixor    -> emit "xor"
+    | Ilsl    -> emit "sll"
+    | Ilsr    -> emit "srl"
+    | Iasr    -> emit "sra"
+    | Icomp cc ->
+        `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+    | Icheckbound _ ->
+      let handler = match !handlers with [] -> None | h :: _ -> Some h in
+      let label = match List.assoc_opt handler !bound_error_labels with
+        | None ->
+          let label = new_label () in
+          bound_error_labels := (handler, label) :: !bound_error_labels;
+          label
+        | Some label ->
+          label
       in
-      match op with
-      | Iadd    -> emit "add"
-      | Isub    -> emit "sub"
-      | Imul    -> emit "mul"
-      | Imulh   -> assert false
-      | Idiv    -> emit "div"
-      | Imod    -> emit "rem"
-      | Iand    -> emit "and"
-      | Ior     -> emit "or"
-      | Ixor    -> emit "xor"
-      | Ilsl    -> emit "sll"
-      | Ilsr    -> emit "srl"
-      | Iasr    -> emit "sra"
-      | Icomp cc ->
-          `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
-      | Icheckbound _ ->
-        let handler = match !handlers with [] -> None | h :: _ -> Some h in
-        let label = match List.assoc_opt handler !bound_error_labels with
-          | None ->
-            let label = new_label () in
-            bound_error_labels := (handler, label) :: !bound_error_labels;
-            label
-          | Some label ->
-            label
-        in
-        let flag = make_temp () in
-        `  cmp.le.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+      let flag = make_temp () in
+      `  cmp.le.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
   let emit_op arg res = function
@@ -269,7 +272,7 @@ let emit_linear fast body =
         `  st.{emit_string instr} [{emit_temp addr}], {emit_reg arg.(0)}\n`
       );
     | Ialloc { words } ->
-      if fast then begin
+      if fast && !inline_alloc then begin
         let gc_ret = new_label () in
         let gc_lbl = new_label () in
         `{emit_label gc_ret}:\n`;
@@ -453,15 +456,9 @@ let emit_linear fast body =
       `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
       `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
-    | Lraise(raise)->
+    | Lraise(raise) ->
       (match raise with
-      | Cmm.Raise_withtrace when no_handler () ->
-        let exn = emit_addr "caml_raise_exn" in
-        `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
-      | Cmm.Raise_withtrace ->
-        let exn = emit_addr "caml_raise_exn" in
-        `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
-      | Cmm.Raise_notrace when no_handler () ->
+      | Cmm.Raise_notrace when !inline_raise && no_handler () ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
         let jmp_frame = make_temp () in
@@ -487,9 +484,15 @@ let emit_linear fast body =
 
         `  ld.8.i64 {emit_temp ret_val}, [{emit_temp jmp_frame}]\n`;
         `  ji {emit_temp ret_val}\n`
-      | Cmm.Raise_notrace ->
+      | Cmm.Raise_notrace when !inline_raise ->
         (* TODO: not implemented *)
         assert false
+      | _ when no_handler () ->
+        let exn = emit_addr "caml_raise_exn" in
+        `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
+      | _ ->
+        let exn = emit_addr "caml_raise_exn" in
+        `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""}, {emit_handler !handlers} @caml_raise_frame\n`;
       )
   in
   let rec emit = function
