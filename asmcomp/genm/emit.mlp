@@ -223,7 +223,7 @@ let emit_linear fast body =
       if alloc then begin
         let wrap = make_temp () in
         `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-        `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
+        `  {emit_call !handlers}{emit_string types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
       end else begin
         `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
       end
