@@ -38,7 +38,7 @@ let rec pow a = function
     let b = pow a (n / 2) in
     if n mod 2 = 0 then b * b else b * b * a
 
-let emit_label lbl = emit_string ".L"; emit_int lbl
+let emit_label lbl = emit_int lbl
 
 let emit_global_label s =
   let lbl = Compilenv.make_symbol (Some s) in
@@ -427,7 +427,7 @@ let emit_linear fast body =
       `  st.8 [{emit_temp jmp_frame}], {emit_temp exn_addr}\n`;
       `  jmp {emit_label label}\n`;
       `{emit_label lbl}:\n`;
-      `  mov.i64 {emit_temp val_addr}, _caml_exn_val\n`;
+      `  mov.i64 {emit_temp val_addr}, caml_exn_val\n`;
       `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
     | Lpushtrap ->
       assert (!last_trap <> 0);

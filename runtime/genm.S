@@ -17,109 +17,109 @@
 # caml_alloc1
 ################################################################################
   .text
-  .globl _caml_alloc1
-_caml_alloc1:
+  .globl caml_alloc1
+caml_alloc1:
   trap
 
 ################################################################################
 # caml_alloc2
 ################################################################################
   .text
-  .globl _caml_alloc2
-_caml_alloc2:
+  .globl caml_alloc2
+caml_alloc2:
   trap
 
 ################################################################################
 # caml_alloc3
 ################################################################################
   .text
-  .globl _caml_alloc3
-_caml_alloc3:
+  .globl caml_alloc3
+caml_alloc3:
   trap
 
 ################################################################################
 # caml_allocN
 ################################################################################
   .text
-  .globl _caml_allocN
-_caml_allocN:
+  .globl caml_allocN
+caml_allocN:
   trap
 
 ################################################################################
 # caml_c_call
 ################################################################################
   .text
-  .globl _caml_c_call
-_caml_c_call:
+  .globl caml_c_call
+caml_c_call:
   trap
 
 ################################################################################
 # caml_call_gc
 ################################################################################
   .text
-  .globl _caml_call_gc
-_caml_call_gc:
+  .globl caml_call_gc
+caml_call_gc:
   trap
 
 ################################################################################
 # caml_ml_array_bound_error
 ################################################################################
   .text
-  .globl _caml_ml_array_bound_error
-_caml_ml_array_bound_error:
+  .globl caml_ml_array_bound_error
+caml_ml_array_bound_error:
   trap
 
 ################################################################################
 # caml_raise_exn
 ################################################################################
   .text
-  .globl _caml_raise_exn
-_caml_raise_exn:
+  .globl caml_raise_exn
+caml_raise_exn:
   trap
 
   .data
-  .globl _caml_exn_val
-_caml_exn_val:
+  .globl caml_exn_val
+caml_exn_val:
   .quad 0
 
 ################################################################################
 # caml_callback2_exn
 ################################################################################
   .text
-  .globl _caml_callback2_exn
-_caml_callback2_exn:
+  .globl caml_callback2_exn
+caml_callback2_exn:
   trap
 
 ################################################################################
 # caml_callback3_exn
 ################################################################################
   .text
-  .globl _caml_callback3_exn
-_caml_callback3_exn:
+  .globl caml_callback3_exn
+caml_callback3_exn:
   trap
 
 ################################################################################
 # caml_callback_exn
 ################################################################################
   .text
-  .globl _caml_callback_exn
-_caml_callback_exn:
+  .globl caml_callback_exn
+caml_callback_exn:
   trap
 
 ################################################################################
 # caml_stack_overflow
 ################################################################################
   .text
-  .globl _caml_raise_exception
-_caml_raise_exception:
+  .globl caml_raise_exception
+caml_raise_exception:
   trap
 
 ################################################################################
 # caml_start_program
 ################################################################################
   .text
-  .globl _caml_start_program
-_caml_start_program:
+  .globl caml_start_program
+caml_start_program:
 .L107:
   trap
 
@@ -127,16 +127,16 @@ _caml_start_program:
 # caml_stack_overflow
 ################################################################################
   .text
-  .globl _caml_stack_overflow
-_caml_stack_overflow:
+  .globl caml_stack_overflow
+caml_stack_overflow:
   trap
 
 
 ################################################################################
   .data
-  .globl  _caml_system__frametable
+  .globl  caml_system__frametable
   .align  8
-_caml_system__frametable:
+caml_system__frametable:
   .quad   1           # one descriptor */
   .quad   .L107       # return address into callback */
   .quad   -1          # negative frame size => use callback link */
