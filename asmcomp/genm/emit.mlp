@@ -40,11 +40,6 @@ let rec pow a = function
 
 let emit_label lbl = emit_int lbl
 
-let emit_global_label s =
-  let lbl = Compilenv.make_symbol (Some s) in
-  `.globl {emit_symbol lbl}\n`;
-  `{emit_symbol lbl}:\n`
-
 let emit_linear fast body =
   let bound_error_labels = ref [] in
   let gc_sites = ref [] in
@@ -571,14 +566,8 @@ let fundecl f =
   `\n`
 
 let begin_assembly () =
-  `  .data\n`;
-  emit_global_label "data_begin";
-  `  .text\n`;
-  emit_global_label "code_begin"
+  ()
 
 let end_assembly () =
-  `  .data\n`;
-  emit_global_label "data_end";
-  `  .text\n`;
-  emit_global_label "code_end";
+  ()
 

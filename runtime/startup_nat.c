@@ -55,33 +55,30 @@ struct segment { char * begin; char * end; };
 
 static void init_static(void)
 {
-  extern struct segment caml_data_segments[], caml_code_segments[];
-  int i;
+  extern char *caml_data_begin, *caml_data_end;
+  extern char *caml_code_begin, *caml_code_end;
   struct code_fragment * cf;
 
   caml_init_atom_table ();
 
+  /* PR#5509: we must include the zero word at end of data segment,
+     because pointers equal to caml_data_segments[i].end are static data. */
+#ifdef TARGET_llir
+  if (caml_page_table_add(In_static_data, caml_data_begin, caml_data_end + sizeof(value)) != 0)
+    caml_fatal_error("Fatal error: not enough memory for initial page table");
+#else
   for (i = 0; caml_data_segments[i].begin != 0; i++) {
-    /* PR#5509: we must include the zero word at end of data segment,
-       because pointers equal to caml_data_segments[i].end are static data. */
     if (caml_page_table_add(In_static_data,
                             caml_data_segments[i].begin,
                             caml_data_segments[i].end + sizeof(value)) != 0)
       caml_fatal_error("not enough memory for initial page table");
   }
+#endif
 
-  caml_code_area_start = caml_code_segments[0].begin;
-  caml_code_area_end = caml_code_segments[0].end;
-  for (i = 1; caml_code_segments[i].begin != 0; i++) {
-    if (caml_code_segments[i].begin < caml_code_area_start)
-      caml_code_area_start = caml_code_segments[i].begin;
-    if (caml_code_segments[i].end > caml_code_area_end)
-      caml_code_area_end = caml_code_segments[i].end;
-  }
   /* Register the code in the table of code fragments */
   cf = caml_stat_alloc(sizeof(struct code_fragment));
-  cf->code_start = caml_code_area_start;
-  cf->code_end = caml_code_area_end;
+  cf->code_start = caml_code_begin;
+  cf->code_end = caml_code_end;
   cf->digest_computed = 0;
   caml_ext_table_init(&caml_code_fragments_table, 8);
   caml_ext_table_add(&caml_code_fragments_table, cf);

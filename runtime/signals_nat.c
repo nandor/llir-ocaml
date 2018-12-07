@@ -46,16 +46,13 @@ extern signal_handler caml_win32_signal(int sig, signal_handler action);
 extern void caml_win32_overflow_detection();
 #endif
 
-extern char * caml_code_area_start, * caml_code_area_end;
-extern char caml_system__code_begin, caml_system__code_end;
+extern char * caml_code_start, * caml_code_end;
 
 /* Do not use the macro from address_class.h here. */
 #undef Is_in_code_area
 #define Is_in_code_area(pc) \
- ( ((char *)(pc) >= caml_code_area_start && \
-    (char *)(pc) <= caml_code_area_end)     \
-|| ((char *)(pc) >= &caml_system__code_begin && \
-    (char *)(pc) <= &caml_system__code_end)     \
+ ( ((char *)(pc) >= caml_code_start && \
+    (char *)(pc) <= caml_code_end)     \
 || (Classify_addr(pc) & In_code_area) )
 
 /* This routine is the common entry point for garbage collection
