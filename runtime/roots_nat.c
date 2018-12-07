@@ -164,9 +164,7 @@ static void init_frame_descriptors(link *new_frametables)
 
 void caml_init_frame_descriptors(void) {
   intnat i;
-  link *new_frametables = NULL;
-  for (i = 0; caml_frametable[i] != 0; i++)
-    new_frametables = cons(caml_frametable[i],new_frametables);
+  link *new_frametables = cons(caml_genm_frametable, NULL);
   init_frame_descriptors(new_frametables);
 }
 

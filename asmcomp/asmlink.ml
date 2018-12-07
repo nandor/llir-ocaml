@@ -267,7 +267,9 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
   else
     compile_phrase(Cmm_helpers.code_segment_table("_startup" :: name_list));
   let all_names = "_startup" :: "_system" :: name_list in
-  compile_phrase (Cmm_helpers.frame_table all_names);
+  if not Config.llir then begin
+    compile_phrase (Cmmgen.frame_table all_names);
+  end;
   if Config.spacetime then begin
     compile_phrase (Cmm_helpers.spacetime_shapes all_names);
   end;
