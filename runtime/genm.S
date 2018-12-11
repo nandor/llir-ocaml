@@ -120,8 +120,54 @@ caml_raise_exception:
   .text
   .globl caml_start_program
 caml_start_program:
-.L107:
-  trap
+  .stack        24
+
+.Lentry:
+  # Save global variables.
+  mov.i64           $0, caml_gc_regs
+  ld.8.i64          $1, [$0]
+  mov.i64           $2, caml_last_return_address
+  ld.8.i64          $3, [$2]
+  mov.i64           $4, caml_bottom_of_stack
+  ld.8.i64          $5, [$4]
+  mov.i64           $6, caml_exception_pointer
+  ld.8.i64          $7, [$6]
+
+  # Create an exception frame.
+  frame.i64         $51, 0            # Pointer to handler.
+  mov.i64           $54, .Lhandler
+  st.8              [$51], $54
+  frame.i64         $52, 8            # Pointer to stack frame.
+  mov.i64           $55, $sp
+  st.8              [$52], $55
+  frame.i64         $53, 6            # Pointer to exn chain.
+  ld.8.u64          $56, [$6]
+  st.8              [$53], $56
+  st.8              [$6], $51         # Pointer to this structure.
+
+  # Invoke the OCaml program.
+  mov.i64           $10, caml_program
+  invoke.i64.ocaml  $11, $10, .Lhandler       @caml_root_frame
+
+.Lreturn:
+  phi.i64           $12, .Lentry, $11, .Lhandler, $23
+
+  # Restore global variables, popping the trap.
+  st.8              [$6], $7
+  st.8              [$4], $5
+  st.8              [$2], $3
+  st.8              [$0], $1
+
+  ret.i64           $12
+
+.Lhandler:
+  # Exception handler, marks value as exception.
+  mov.i64           $20, caml_exn_val
+  ld.8.i64          $21, [$20]
+  mov.i64           $22, 2
+  or.i64            $23, $21, $22
+  jmp               .Lreturn
+
 
 ################################################################################
 # caml_stack_overflow
@@ -130,18 +176,3 @@ caml_start_program:
   .globl caml_stack_overflow
 caml_stack_overflow:
   trap
-
-
-################################################################################
-  .data
-  .globl  caml_system__frametable
-  .align  8
-caml_system__frametable:
-  .quad   1           # one descriptor */
-  .quad   .L107       # return address into callback */
-  .quad   -1          # negative frame size => use callback link */
-  .quad   0           # no roots here */
-  .align  8
-  .quad   16
-  .quad   0
-  .ascii "amd64.S"
