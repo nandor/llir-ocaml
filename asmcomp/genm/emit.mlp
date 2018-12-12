@@ -287,16 +287,13 @@ let emit_linear fast body =
         `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
         gc_sites := { gc_lbl; gc_ret; gc_exc = !handlers } :: !gc_sites
       end else begin
-        let ptr = make_temp () in
         let args = match words with
           | 16 -> [emit_addr "caml_alloc1"]
           | 24 -> [emit_addr "caml_alloc2"]
           | 32 -> [emit_addr "caml_alloc3"]
           | _  -> [emit_addr "caml_allocN"; emit_const words]
         in
-        `  {emit_call !handlers}.i64.c {emit_temp ptr}, {emit_temps args}{emit_handler !handlers} @caml_call_frame\n`;
-        let imm = emit_const 8 in
-        `  add.i64 {emit_reg res.(0)}, {emit_temp ptr}, {emit_temp imm}\n`;
+        `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame\n`
       end
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) op
