@@ -212,15 +212,23 @@ let emit_linear fast body =
       `  tcall.i64.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func; alloc } ->
       let nres = Array.length res in
-      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let res_types = String.concat "" (List.init nres (fun _ -> ".i64")) in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       if alloc then begin
         let wrap = make_temp () in
-        `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call"}\n`;
-        `  {emit_call !handlers}{emit_string types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
+        let arg_types = arg
+          |> Array.map (fun arg -> match arg.typ with
+            | Float -> "f64"
+            | _ -> "i64"
+            )
+          |> Array.to_list
+          |> String.concat "_"
+        in
+        `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call_"}{emit_string arg_types}\n`;
+        `  {emit_call !handlers}{emit_string res_types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
       end else begin
-        `  {emit_call !handlers}{emit_string types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
+        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
       end
     | Istackoffset(_) ->
       assert false
