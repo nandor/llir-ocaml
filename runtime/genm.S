@@ -21,7 +21,7 @@
 caml_alloc1:
   .call       c
   .args       0
-
+.Lalloc1:
   mov.i64     $0, caml_young_ptr
   ld.8.i64    $1, [$0]
   mov.i64     $2, 16
@@ -33,12 +33,14 @@ caml_alloc1:
   cmp.ge.i32  $6, $3, $5
   jf          $6, .Lcollect1
 
+  st.8        [$0], $3
   mov.i64     $7, 8
   add.i64     $8, $3, $7
   ret.i64     $8
 
 .Lcollect1:
   trap
+  jmp         .Lalloc1
 
 ################################################################################
 # caml_alloc2
@@ -46,7 +48,28 @@ caml_alloc1:
   .text
   .globl caml_alloc2
 caml_alloc2:
+  .call       c
+  .args       0
+.Lalloc2:
+  mov.i64     $0, caml_young_ptr
+  ld.8.i64    $1, [$0]
+  mov.i64     $2, 24
+  sub.i64     $3, $1, $2
+
+  mov.i64     $4, caml_young_limit
+  ld.8.i64    $5, [$4]
+
+  cmp.ge.i32  $6, $3, $5
+  jf          $6, .Lcollect2
+
+  st.8        [$0], $3
+  mov.i64     $7, 8
+  add.i64     $8, $3, $7
+  ret.i64     $8
+
+.Lcollect2:
   trap
+  jmp         .Lcollect2
 
 ################################################################################
 # caml_alloc3
@@ -54,7 +77,28 @@ caml_alloc2:
   .text
   .globl caml_alloc3
 caml_alloc3:
+  .call       c
+  .args       0
+.Lalloc3:
+  mov.i64     $0, caml_young_ptr
+  ld.8.i64    $1, [$0]
+  mov.i64     $2, 32
+  sub.i64     $3, $1, $2
+
+  mov.i64     $4, caml_young_limit
+  ld.8.i64    $5, [$4]
+
+  cmp.ge.i32  $6, $3, $5
+  jf          $6, .Lcollect3
+
+  st.8        [$0], $3
+  mov.i64     $7, 8
+  add.i64     $8, $3, $7
+  ret.i64     $8
+
+.Lcollect3:
   trap
+  jmp         .Lcollect3
 
 ################################################################################
 # caml_allocN
@@ -62,7 +106,28 @@ caml_alloc3:
   .text
   .globl caml_allocN
 caml_allocN:
+  .call       c
+  .args       0, i64
+.LallocN:
+  mov.i64     $0, caml_young_ptr
+  ld.8.i64    $1, [$0]
+  arg.i64     $2, 0
+  sub.i64     $3, $1, $2
+
+  mov.i64     $4, caml_young_limit
+  ld.8.i64    $5, [$4]
+
+  cmp.ge.i32  $6, $3, $5
+  jf          $6, .LcollectN
+
+  st.8        [$0], $3
+  mov.i64     $7, 8
+  add.i64     $8, $3, $7
+  ret.i64     $8
+
+.LcollectN:
   trap
+  jmp         .LcollectN
 
 ################################################################################
 # caml_c_call_i64
