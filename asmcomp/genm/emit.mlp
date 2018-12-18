@@ -490,10 +490,10 @@ let emit_linear fast body =
         (* TODO: not implemented *)
         assert false
       | _ when no_handler () ->
-        let exn = emit_addr "caml_raise_exn" in
+        let exn = emit_addr "caml_raise_exception" in
         `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
       | _ ->
-        let exn = emit_addr "caml_raise_exn" in
+        let exn = emit_addr "caml_raise_exception" in
         `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""}, {emit_handler !handlers} @caml_raise_frame\n`;
       )
   in
