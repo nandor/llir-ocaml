@@ -238,6 +238,37 @@ caml_callback_exn:
   .text
   .globl caml_raise_exception
 caml_raise_exception:
+  .call       c
+  .args       0, i64
+
+  # Check if traces are active.
+  mov.i64     $0, caml_backtrace_active
+  ld.4.i32    $1, [$0]
+  mov.i32     $2, 1
+  cmp.eq.i32  $3, $1, $2
+  jt          $3, .Lactive
+.Lthrow:
+  # Raise the exception here.
+  arg.i64     $10, 0
+  mov.i64     $11, caml_exn_val
+  st.8        [$11], $10
+
+  # Load the frame.
+  mov.i64     $14, caml_exception_pointer
+  mov.i64     $15, 8
+  ld.8.i64    $16, [$14]
+  add.i64     $17, $16, $15
+  add.i64     $18, $17, $15
+
+  ld.8.i64    $19, [$16]    # Address.
+  ld.8.i64    $20, [$17]    # Stack pointer.
+  ld.8.i64    $21, [$18]    # Next frame.
+
+  # Jump.
+  set.i64     $sp, $20
+  st.8        [$14], $21
+  ji          $19
+.Lactive:
   trap
 
 ################################################################################

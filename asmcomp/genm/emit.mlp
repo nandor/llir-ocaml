@@ -475,8 +475,8 @@ let emit_linear fast body =
         `  st.8 [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
 
         `  ld.8.i64 {emit_temp jmp_frame}, [{emit_temp exc_addr}]\n`;
-        `  sub.i64 {emit_temp sp_frame}, {emit_temp jmp_frame}, {emit_temp offset}\n`;
-        `  sub.i64 {emit_temp exc_frame}, {emit_temp sp_frame}, {emit_temp offset}\n`;
+        `  add.i64 {emit_temp sp_frame}, {emit_temp jmp_frame}, {emit_temp offset}\n`;
+        `  add.i64 {emit_temp exc_frame}, {emit_temp sp_frame}, {emit_temp offset}\n`;
 
         `  ld.8.i64 {emit_temp next_sp}, [{emit_temp sp_frame}]\n`;
         `  set.i64 $sp, {emit_temp next_sp}\n`;
