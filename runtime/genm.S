@@ -39,7 +39,8 @@ caml_alloc1:
   ret.i64     $8
 
 .Lcollect1:
-  trap
+  mov.i64     $99, caml_call_gc
+  call.c      $99
   jmp         .Lalloc1
 
 ################################################################################
@@ -68,7 +69,8 @@ caml_alloc2:
   ret.i64     $8
 
 .Lcollect2:
-  trap
+  mov.i64     $99, caml_call_gc
+  call.c      $99
   jmp         .Lcollect2
 
 ################################################################################
@@ -97,7 +99,8 @@ caml_alloc3:
   ret.i64     $8
 
 .Lcollect3:
-  trap
+  mov.i64     $99, caml_call_gc
+  call.c      $99
   jmp         .Lcollect3
 
 ################################################################################
@@ -126,7 +129,8 @@ caml_allocN:
   ret.i64     $8
 
 .LcollectN:
-  trap
+  mov.i64     $99, caml_call_gc
+  call.c      $99
   jmp         .LcollectN
 
 ################################################################################
@@ -412,7 +416,7 @@ caml_start_program_impl:
 .Lreturn:
   phi.i64           $12, .Lentry, $11, .Lhandler, $23
 
-  # Restore global variables, popping the trap.
+  # Restore global variables, popping the handler.
   st.8              [$6], $7
   st.8              [$4], $5
   st.8              [$2], $3
