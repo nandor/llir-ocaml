@@ -261,12 +261,39 @@ caml_ml_array_bound_error:
   trap
 
 ################################################################################
+# caml_callback_exn
+################################################################################
+  .text
+  .globl caml_callback_exn
+caml_callback_exn:
+  .call             c
+  .args             0, i64, i64
+
+  arg.i64           $0, 0
+  arg.i64           $1, 1
+  ld.8.i64          $2, [$0]
+
+  undef.i64         $3
+  mov.i64           $4, caml_start_program_impl
+  tcall.i64.c       $4, $2, $1, $0, $3, $3
+
+################################################################################
 # caml_callback2_exn
 ################################################################################
   .text
   .globl caml_callback2_exn
 caml_callback2_exn:
-  trap
+  .call             c
+  .args             0, i64, i64, i64
+
+  arg.i64           $0, 0
+  arg.i64           $1, 1
+  arg.i64           $2, 2
+
+  undef.i64         $3
+  mov.i64           $4, caml_start_program_impl
+  mov.i64           $5, caml_apply2
+  tcall.i64.c       $4, $5, $1, $2, $0, $3
 
 ################################################################################
 # caml_callback3_exn
@@ -274,15 +301,17 @@ caml_callback2_exn:
   .text
   .globl caml_callback3_exn
 caml_callback3_exn:
-  trap
+  .call             c
+  .args             0, i64, i64, i64, i64
 
-################################################################################
-# caml_callback_exn
-################################################################################
-  .text
-  .globl caml_callback_exn
-caml_callback_exn:
-  trap
+  arg.i64           $0, 0
+  arg.i64           $1, 1
+  arg.i64           $2, 2
+  arg.i64           $3, 3
+
+  mov.i64           $4, caml_start_program_impl
+  mov.i64           $5, caml_apply3
+  tcall.i64.c       $4, $5, $1, $2, $3, $0
 
 ################################################################################
 # caml_stack_overflow
@@ -337,8 +366,18 @@ caml_exn_val:
   .text
   .globl caml_start_program
 caml_start_program:
-  .stack        24
+  mov.i64           $0, caml_program
+  mov.i64           $1, caml_start_program_impl
+  undef.i64         $2
+  tcall.i64.c       $1, $0, $2, $2, $2, $2
 
+################################################################################
+# caml_start_program_impl
+################################################################################
+caml_start_program_impl:
+  .call             c
+  .stack            24
+  .args             0, i64, i64, i64, i64, i64
 .Lentry:
   # Save global variables.
   mov.i64           $0, caml_gc_regs
@@ -357,14 +396,18 @@ caml_start_program:
   frame.i64         $52, 8            # Pointer to stack frame.
   mov.i64           $55, $sp
   st.8              [$52], $55
-  frame.i64         $53, 6            # Pointer to exn chain.
+  frame.i64         $53, 16           # Pointer to exn chain.
   ld.8.u64          $56, [$6]
   st.8              [$53], $56
   st.8              [$6], $51         # Pointer to this structure.
 
   # Invoke the OCaml program.
-  mov.i64           $10, caml_program
-  invoke.i64.ocaml  $11, $10, .Lhandler       @caml_root_frame
+  arg.i64           $10, 0
+  arg.i64           $30, 1
+  arg.i64           $31, 2
+  arg.i64           $32, 3
+  arg.i64           $33, 4
+  invoke.i64.ocaml  $11, $10, $30, $31, $32, $33, .Lhandler @caml_root_frame
 
 .Lreturn:
   phi.i64           $12, .Lentry, $11, .Lhandler, $23
