@@ -39,7 +39,20 @@ caml_alloc1:
   ret.i64     $8
 
 .Lcollect1:
-  mov.i64     $99, caml_call_gc
+  mov.i64     $0, $sp
+
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  add.i64     $5, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $5
+
+  mov.i64     $99, caml_collect
   call.c      $99
   jmp         .Lalloc1
 
@@ -69,9 +82,23 @@ caml_alloc2:
   ret.i64     $8
 
 .Lcollect2:
-  mov.i64     $99, caml_call_gc
+  mov.i64     $0, $sp
+
+  mov.i64     $1, 24
+  add.i64     $2, $0, $1
+
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  mov.i64     $7, 8
+  add.i64     $5, $2, $7
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $5
+
+  mov.i64     $99, caml_collect
   call.c      $99
-  jmp         .Lcollect2
+  jmp         .Lalloc2
 
 ################################################################################
 # caml_alloc3
@@ -99,9 +126,22 @@ caml_alloc3:
   ret.i64     $8
 
 .Lcollect3:
-  mov.i64     $99, caml_call_gc
+  mov.i64     $0, $sp
+
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  add.i64     $5, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $5
+
+  mov.i64     $99, caml_collect
   call.c      $99
-  jmp         .Lcollect3
+  jmp         .Lalloc3
 
 ################################################################################
 # caml_allocN
@@ -129,9 +169,22 @@ caml_allocN:
   ret.i64     $8
 
 .LcollectN:
-  mov.i64     $99, caml_call_gc
+  mov.i64     $0, $sp
+
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  add.i64     $5, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $5
+
+  mov.i64     $99, caml_collect
   call.c      $99
-  jmp         .LcollectN
+  jmp         .LallocN
 
 ################################################################################
 # caml_c_call_i64
@@ -143,16 +196,20 @@ caml_c_call_i64:
   .args       0, i64, i64
 
   mov.i64     $0, $sp
-  ld.8.i64    $1, [$0]
 
-  mov.i64     $2, caml_last_return_address
-  st.8        [$2], $1
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $0
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
 
-  arg.i64     $4, 0
-  arg.i64     $5, 1
-  tcall.i64.c $4, $5
+  add.i64     $7, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $8, 0
+  arg.i64     $9, 1
+  tcall.i64.c $8, $9
 
 ################################################################################
 # caml_c_call_i64_i64
@@ -164,17 +221,21 @@ caml_c_call_i64_i64:
   .args       0, i64, i64, i64
 
   mov.i64     $0, $sp
-  ld.8.i64    $1, [$0]
 
-  mov.i64     $2, caml_last_return_address
-  st.8        [$2], $1
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $0
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
 
-  arg.i64     $4, 0
-  arg.i64     $5, 1
-  arg.i64     $6, 2
-  tcall.i64.c $4, $5, $6
+  add.i64     $7, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $10, 0
+  arg.i64     $11, 1
+  arg.i64     $12, 2
+  tcall.i64.c $10, $11, $12
 
 ################################################################################
 # caml_c_call_i64_i64_i64
@@ -186,18 +247,22 @@ caml_c_call_i64_i64_i64:
   .args       0, i64, i64, i64, i64
 
   mov.i64     $0, $sp
-  ld.8.i64    $1, [$0]
 
-  mov.i64     $2, caml_last_return_address
-  st.8        [$2], $1
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $0
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
 
-  arg.i64     $4, 0
-  arg.i64     $5, 1
-  arg.i64     $6, 2
-  arg.i64     $7, 3
-  tcall.i64.c $4, $5, $6, $7
+  add.i64     $7, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $10, 0
+  arg.i64     $11, 1
+  arg.i64     $12, 2
+  arg.i64     $13, 3
+  tcall.i64.c $10, $11, $12, $13
 
 ################################################################################
 # caml_c_call_i64_i64_i64_i64
@@ -206,23 +271,26 @@ caml_c_call_i64_i64_i64:
   .globl caml_c_call_i64_i64_i64_i64
 caml_c_call_i64_i64_i64_i64:
   .call       ext
-  .args       0, i64, i64, i64, i64, i64, i64
+  .args       0, i64, i64, i64, i64, i64
 
   mov.i64     $0, $sp
-  ld.8.i64    $1, [$0]
 
-  mov.i64     $2, caml_last_return_address
-  st.8        [$2], $1
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $0
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
 
-  arg.i64     $4, 0
-  arg.i64     $5, 1
-  arg.i64     $6, 2
-  arg.i64     $7, 3
-  arg.i64     $8, 4
-  arg.i64     $9, 5
-  tcall.i64.c $4, $5, $6, $7, $8, $9
+  add.i64     $7, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $10, 0
+  arg.i64     $11, 1
+  arg.i64     $12, 2
+  arg.i64     $13, 3
+  arg.i64     $14, 4
+  tcall.i64.c $10, $11, $12, $13, $14
 
 ################################################################################
 # caml_c_call_i64_i64_i64_i64_i64
@@ -231,22 +299,27 @@ caml_c_call_i64_i64_i64_i64:
   .globl caml_c_call_i64_i64_i64_i64_i64
 caml_c_call_i64_i64_i64_i64_i64:
   .call       ext
-  .args       0, i64, i64, i64, i64, i64
+  .args       0, i64, i64, i64, i64, i64, i64
 
   mov.i64     $0, $sp
-  ld.8.i64    $1, [$0]
 
-  mov.i64     $2, caml_last_return_address
-  st.8        [$2], $1
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $0
+  mov.i64     $1, 8
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
 
-  arg.i64     $4, 0
-  arg.i64     $5, 1
-  arg.i64     $6, 2
-  arg.i64     $7, 3
-  arg.i64     $8, 4
-  tcall.i64.c $4, $5, $6, $7, $8
+  add.i64     $7, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $10, 0
+  arg.i64     $11, 1
+  arg.i64     $12, 2
+  arg.i64     $13, 3
+  arg.i64     $14, 4
+  arg.i64     $15, 5
+  tcall.i64.c $10, $11, $12, $13, $14, $15
 
 ################################################################################
 # caml_call_gc
@@ -254,7 +327,20 @@ caml_c_call_i64_i64_i64_i64_i64:
   .text
   .globl caml_call_gc
 caml_call_gc:
-  trap
+  mov.i64     $0, $sp
+  mov.i64     $1, 8
+
+  add.i64     $2, $0, $1
+  ld.8.i64    $3, [$2]
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  add.i64     $5, $2, $1
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $5
+
+  mov.i64     $7, caml_collect
+  tcall.c     $7
 
 ################################################################################
 # caml_ml_array_bound_error
@@ -380,18 +466,25 @@ caml_start_program:
 ################################################################################
 caml_start_program_impl:
   .call             c
-  .stack            24
+  .stack            48
   .args             0, i64, i64, i64, i64, i64
 .Lentry:
   # Save global variables.
+  frame.i64         $40, 40
   mov.i64           $0, caml_gc_regs
   ld.8.i64          $1, [$0]
+  st.8              [$40], $1
+
+  frame.i64         $41, 32
   mov.i64           $2, caml_last_return_address
   ld.8.i64          $3, [$2]
+  st.8              [$41], $3
+
+  frame.i64         $42, 24
   mov.i64           $4, caml_bottom_of_stack
   ld.8.i64          $5, [$4]
-  mov.i64           $6, caml_exception_pointer
-  ld.8.i64          $7, [$6]
+  st.8              [$42], $5
+
 
   # Create an exception frame.
   frame.i64         $51, 0            # Pointer to handler.
@@ -401,35 +494,43 @@ caml_start_program_impl:
   mov.i64           $55, $sp
   st.8              [$52], $55
   frame.i64         $53, 16           # Pointer to exn chain.
+  mov.i64           $6, caml_exception_pointer
   ld.8.u64          $56, [$6]
   st.8              [$53], $56
   st.8              [$6], $51         # Pointer to this structure.
 
   # Invoke the OCaml program.
-  arg.i64           $10, 0
-  arg.i64           $30, 1
-  arg.i64           $31, 2
-  arg.i64           $32, 3
-  arg.i64           $33, 4
-  invoke.i64.ocaml  $11, $10, $30, $31, $32, $33, .Lhandler @caml_root_frame
+  arg.i64           $90, 0
+  arg.i64           $91, 1
+  arg.i64           $92, 2
+  arg.i64           $93, 3
+  arg.i64           $94, 4
+  invoke.i64.ocaml  $55, $90, $91, $92, $93, $94, .Lhandler @caml_root_frame
 
 .Lreturn:
-  phi.i64           $12, .Lentry, $11, .Lhandler, $23
+  phi.i64           $300, .Lentry, $55, .Lhandler, $203
 
   # Restore global variables, popping the handler.
-  st.8              [$6], $7
-  st.8              [$4], $5
-  st.8              [$2], $3
-  st.8              [$0], $1
+  ld.8.i64          $400, [$53]
+  st.8              [$6], $400
 
-  ret.i64           $12
+  ld.8.i64          $401, [$42]
+  st.8              [$4], $401
+
+  ld.8.i64          $402, [$41]
+  st.8              [$2], $402
+
+  ld.8.i64          $403, [$40]
+  st.8              [$0], $403
+
+  ret.i64           $300
 
 .Lhandler:
   # Exception handler, marks value as exception.
-  mov.i64           $20, caml_exn_val
-  ld.8.i64          $21, [$20]
-  mov.i64           $22, 2
-  or.i64            $23, $21, $22
+  mov.i64           $200, caml_exn_val
+  ld.8.i64          $201, [$200]
+  mov.i64           $202, 2
+  or.i64            $203, $201, $202
   jmp               .Lreturn
 
 

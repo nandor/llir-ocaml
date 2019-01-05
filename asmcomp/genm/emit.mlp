@@ -158,7 +158,7 @@ let emit_linear fast body =
       `  sext.i128 {emit_temp rega}, {emit_reg lhs.(0)}\n`;
       `  sext.i128 {emit_temp regb}, {rhs ()}\n`;
       `  mul.i128 {emit_temp regr}, {emit_temp rega}, {emit_temp regb}\n`;
-      `  mov.i128 {emit_temp regc}, 64\n`;
+      `  mov.i8 {emit_temp regc}, 64\n`;
       `  srl.i128 {emit_temp regr}, {emit_temp regr}, {emit_temp regc}\n`;
       `  trunc.i64 {emit_reg res.(0)}, {emit_temp regr}\n`
     | Idiv    -> emit "div"
