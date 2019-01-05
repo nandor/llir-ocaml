@@ -41,14 +41,15 @@ caml_alloc1:
 .Lcollect1:
   mov.i64     $0, $sp
 
-  mov.i64     $1, 8
+  mov.i64     $1, 24
   add.i64     $2, $0, $1
 
   ld.8.i64    $3, [$2]
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $5, $2, $1
+  mov.i64     $7, 8
+  add.i64     $5, $2, $7
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -128,14 +129,15 @@ caml_alloc3:
 .Lcollect3:
   mov.i64     $0, $sp
 
-  mov.i64     $1, 8
+  mov.i64     $1, 24
   add.i64     $2, $0, $1
 
   ld.8.i64    $3, [$2]
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $5, $2, $1
+  mov.i64     $7, 8
+  add.i64     $5, $2, $7
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -171,14 +173,15 @@ caml_allocN:
 .LcollectN:
   mov.i64     $0, $sp
 
-  mov.i64     $1, 8
+  mov.i64     $1, 24
   add.i64     $2, $0, $1
 
   ld.8.i64    $3, [$2]
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $5, $2, $1
+  mov.i64     $7, 8
+  add.i64     $5, $2, $7
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
