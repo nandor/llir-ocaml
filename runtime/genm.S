@@ -544,3 +544,8 @@ caml_start_program_impl:
   .globl caml_stack_overflow
 caml_stack_overflow:
   trap
+
+################################################################################
+  .data
+externs:
+  .quad caml_garbage_collection
