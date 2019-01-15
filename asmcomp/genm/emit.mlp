@@ -230,11 +230,11 @@ let emit_linear fast body =
     | Iload(size, addr) ->
       let instr = match size with
         | Byte_unsigned      -> "1.u64"
-        | Byte_signed        -> "1.s64"
+        | Byte_signed        -> "1.i64"
         | Sixteen_unsigned   -> "2.u64"
-        | Sixteen_signed     -> "2.s64"
+        | Sixteen_signed     -> "2.i64"
         | Thirtytwo_unsigned -> "4.u64"
-        | Thirtytwo_signed   -> "4.s64"
+        | Thirtytwo_signed   -> "4.i64"
         | Word_int           -> "8.u64"
         | Word_val           -> "8.u64"
         | Single             -> "4.f64"
