@@ -22,7 +22,7 @@ open Linearize
 open Emitaux
 open Reg
 
-type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: int list }
+type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: (int option) list }
 
 let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
 
@@ -124,16 +124,22 @@ let emit_linear fast body =
   let current_block = ref 0 in
   let handlers = ref [] in
   let traps = Hashtbl.create 16 in
-  let no_handler () = match !handlers with [] -> true | _ -> false in
-
-  let emit_call = function
-    | [] -> emit_string "call"
-    | _ -> emit_string "invoke"
+  let rec no_handler = function
+    | [] -> true
+    | Some _ :: _ -> false
+    | None :: hs ->  no_handler hs
   in
 
-  let emit_handler = function
+  let rec emit_call = function
+    | Some _ :: _ -> emit_string "invoke"
+    | None :: hs -> emit_call hs
+    | [] -> emit_string "call"
+  in
+
+  let rec emit_handler = function
+    | Some h :: _ -> `, {emit_label h}`
+    | None :: hs -> emit_handler hs
     | [] -> ()
-    | h :: _ -> `, {emit_label h}`
   in
 
   let emit_intop res lhs rhs op =
@@ -166,7 +172,7 @@ let emit_linear fast body =
     | Icomp cc ->
         `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
     | Icheckbound _ ->
-      let handler = match !handlers with [] -> None | h :: _ -> Some h in
+      let handler = match !handlers with [] -> None | h :: _ -> h in
       let label = match List.assoc_opt handler !bound_error_labels with
         | None ->
           let label = new_label () in
@@ -428,8 +434,8 @@ let emit_linear fast body =
       `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
     | Lpushtrap ->
       let handler =
-        try Hashtbl.find traps !current_block
-        with Not_found -> 0
+        try Some (Hashtbl.find traps !current_block)
+        with Not_found -> None
       in
       let trap_idx = List.length !handlers * 3 * 8 in
       handlers := handler :: !handlers;
@@ -458,7 +464,7 @@ let emit_linear fast body =
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
     | Lraise(raise) ->
       (match raise with
-      | Cmm.Raise_notrace when !inline_raise && no_handler () ->
+      | Cmm.Raise_notrace when !inline_raise && no_handler !handlers ->
         let exc_val = make_temp () in
         let ret_val = make_temp () in
         let jmp_frame = make_temp () in
@@ -487,7 +493,7 @@ let emit_linear fast body =
       | Cmm.Raise_notrace when !inline_raise ->
         (* TODO: not implemented *)
         assert false
-      | _ when no_handler () ->
+      | _ when no_handler !handlers ->
         let exn = emit_addr "caml_raise_exception" in
         `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
       | _ ->
