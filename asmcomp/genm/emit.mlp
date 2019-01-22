@@ -103,6 +103,13 @@ let emit_linear fast body =
       assert false
   in
 
+  let emit_typ = function
+    | { typ = Float} -> emit_string "f64"
+    | { typ = Val } -> emit_string "i64"
+    | { typ = Addr } -> emit_string "i64"
+    | { typ = Int } -> emit_string "i64"
+  in
+
   let emit_regs regs st en =
     match regs with
     | [| |] -> ()
@@ -118,6 +125,17 @@ let emit_linear fast body =
 
   let emit_temps temps =
     emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
+  in
+
+  let call_types res =
+    String.concat ""
+      (List.map
+        (fun reg -> match reg.typ with
+        | Float -> ".f64"
+        | _ -> ".i64"
+        )
+        (Array.to_list res)
+      )
   in
 
   (* Exception handler stack *)
@@ -197,12 +215,10 @@ let emit_linear fast body =
     | Iconst_symbol(s) ->
       `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
-      let nres = Array.length res in
-      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let types = call_types res in
       `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_call_frame\n`
     | Icall_imm { func } ->
-      let nres = Array.length res in
-      let types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame\n`
@@ -213,8 +229,7 @@ let emit_linear fast body =
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  tcall.i64.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func; alloc } ->
-      let nres = Array.length res in
-      let res_types = String.concat "" (List.init nres (fun _ -> ".i64")) in
+      let res_types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       if alloc then begin
@@ -336,7 +351,7 @@ let emit_linear fast body =
     | Lend ->
       ()
     | Lop(Imove) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
+      `  mov.{emit_typ res.(0)} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
     | Lop(Iconst_int n) ->
       `  mov.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`
     | Lop(Iconst_symbol s) ->
