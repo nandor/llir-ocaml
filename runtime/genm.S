@@ -39,17 +39,11 @@ caml_alloc1:
   ret.i64     $8
 
 .Lcollect1:
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 24
-  add.i64     $2, $0, $1
-
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  mov.i64     $7, 8
-  add.i64     $5, $2, $7
+  mov.i64     $5, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -83,17 +77,11 @@ caml_alloc2:
   ret.i64     $8
 
 .Lcollect2:
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 24
-  add.i64     $2, $0, $1
-
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  mov.i64     $7, 8
-  add.i64     $5, $2, $7
+  mov.i64     $5, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -127,17 +115,11 @@ caml_alloc3:
   ret.i64     $8
 
 .Lcollect3:
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 24
-  add.i64     $2, $0, $1
-
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  mov.i64     $7, 8
-  add.i64     $5, $2, $7
+  mov.i64     $5, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -171,17 +153,11 @@ caml_allocN:
   ret.i64     $8
 
 .LcollectN:
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 24
-  add.i64     $2, $0, $1
-
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  mov.i64     $7, 8
-  add.i64     $5, $2, $7
+  mov.i64     $5, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
@@ -198,15 +174,11 @@ caml_c_call_i64:
   .call       ext
   .args       0, i64, i64
 
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 8
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $7, $2, $1
+  mov.i64     $7, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $7
 
@@ -223,15 +195,11 @@ caml_c_call_i64_i64:
   .call       ext
   .args       0, i64, i64, i64
 
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 8
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $7, $2, $1
+  mov.i64     $7, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $7
 
@@ -249,15 +217,11 @@ caml_c_call_i64_i64_i64:
   .call       ext
   .args       0, i64, i64, i64, i64
 
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 8
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $7, $2, $1
+  mov.i64     $7, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $7
 
@@ -276,15 +240,11 @@ caml_c_call_i64_i64_i64_i64:
   .call       ext
   .args       0, i64, i64, i64, i64, i64
 
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 8
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $7, $2, $1
+  mov.i64     $7, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $7
 
@@ -304,15 +264,11 @@ caml_c_call_i64_i64_i64_i64_i64:
   .call       ext
   .args       0, i64, i64, i64, i64, i64, i64
 
-  mov.i64     $0, $sp
-
-  mov.i64     $1, 8
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $7, $2, $1
+  mov.i64     $7, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $7
 
@@ -330,15 +286,11 @@ caml_c_call_i64_i64_i64_i64_i64:
   .text
   .globl caml_call_gc
 caml_call_gc:
-  mov.i64     $0, $sp
-  mov.i64     $1, 8
-
-  add.i64     $2, $0, $1
-  ld.8.i64    $3, [$2]
+  mov.i64     $3, $ret_addr
   mov.i64     $4, caml_last_return_address
   st.8        [$4], $3
 
-  add.i64     $5, $2, $1
+  mov.i64     $5, $frame_addr
   mov.i64     $6, caml_bottom_of_stack
   st.8        [$6], $5
 
