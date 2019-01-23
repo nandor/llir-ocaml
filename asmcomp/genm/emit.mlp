@@ -127,6 +127,13 @@ let emit_linear fast body =
     emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
   in
 
+  let emit_value res = match res with
+    | [| |] -> ()
+    | [| { typ = Val } |] -> `\t@caml_value`
+    | [| { typ = _ } |] -> ()
+    | _ -> assert false
+  in
+
   let call_types res =
     String.concat ""
       (List.map
@@ -205,23 +212,24 @@ let emit_linear fast body =
   in
 
   let emit_op arg res = function
-    | Imove   -> assert false
+    | Imove ->
+      `  mov.{emit_typ res.(0)} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
     | Ispill  -> assert false
     | Ireload -> assert false
     | Iconst_int(n) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}{emit_value res}\n`;
     | Iconst_float(f) ->
       `  mov.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(s) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}{emit_value res}\n`;
     | Icall_ind _ ->
       let types = call_types res in
-      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_call_frame\n`
+      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Icall_imm { func } ->
       let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame\n`
+      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Itailcall_ind(_) ->
       `  tcall.i64.ocaml {emit_regs arg " " ""}\n`
     | Itailcall_imm { func } ->
@@ -243,9 +251,9 @@ let emit_linear fast body =
           |> String.concat "_"
         in
         `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call_"}{emit_string arg_types}\n`;
-        `  {emit_call !handlers}{emit_string res_types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame\n`
+        `  {emit_call !handlers}{emit_string res_types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame{emit_value res}\n`
       end else begin
-        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}\n`
+        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}{emit_value res}\n`
       end
     | Istackoffset(_) ->
       assert false
@@ -265,12 +273,12 @@ let emit_linear fast body =
       in
       (match addr with
       | Iindexed(0) ->
-        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_reg arg.(0)}]\n`
+        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_reg arg.(0)}]{emit_value res}\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_temp addr}]\n`
+        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_temp addr}]{emit_value res}\n`
       )
     | Istore(size, addr, _) ->
       let instr = match size with
@@ -309,7 +317,7 @@ let emit_linear fast body =
         `  cmp.lt.i32 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
         `  jt {emit_temp flag}, {emit_label gc_lbl}\n`;
         let imm8 = emit_const 8 in
-        `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}\n`;
+        `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}{emit_value res}\n`;
         gc_sites := { gc_lbl; gc_ret; gc_exc = !handlers } :: !gc_sites
       end else begin
         let args = match words with
@@ -318,7 +326,7 @@ let emit_linear fast body =
           | 32 -> [emit_addr "caml_alloc3"]
           | _  -> [emit_addr "caml_allocN"; emit_const words]
         in
-        `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame\n`
+        `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
       end
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) op
@@ -350,12 +358,6 @@ let emit_linear fast body =
   let emit_instr arg res = function
     | Lend ->
       ()
-    | Lop(Imove) ->
-      `  mov.{emit_typ res.(0)} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
-    | Lop(Iconst_int n) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}\n`
-    | Lop(Iconst_symbol s) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`
     | Lop(op) ->
       emit_op arg res op
     | Lreloadretaddr ->
