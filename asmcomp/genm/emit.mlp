@@ -518,8 +518,20 @@ let emit_linear fast body =
         `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers} @caml_raise_frame\n`;
       )
   in
+  let is_terminator = function
+    | Lreturn -> true
+    | Lop (Itailcall_imm _) -> true
+    | Lop (Itailcall_ind _) -> true
+    | Lraise _ -> true
+    | _ -> false
+  in
   let rec emit = function
-    | { desc = Lend } -> ()
+    | { desc = Lend } ->
+      ()
+    | { arg; res; desc; next = { desc = Lend } } when not (is_terminator desc) ->
+        emit_instr arg res desc;
+        `  mov.i64 $5000, 1\n`;
+        `  ret.i64 $5000\n`
     | instr ->
       emit_instr instr.arg instr.res instr.desc;
       emit instr.next
