@@ -217,7 +217,7 @@ let emit_linear fast body =
     | Ispill  -> assert false
     | Ireload -> assert false
     | Iconst_int(n) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_int (Nativeint.to_int n)}{emit_value res}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_printf "0x%nx" n}{emit_value res}\n`;
     | Iconst_float(f) ->
       `  mov.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(s) ->
@@ -592,11 +592,11 @@ let data = function
     | Calign n           -> `  .p2align {emit_int n}\n`
     | Cint8 n            -> `  .byte    {emit_int n}\n`
     | Cint16 n           -> `  .short   {emit_int n}\n`
-    | Cint32 n           -> `  .long    {emit_int (Nativeint.to_int n)}\n`
-    | Cint n             -> `  .quad    {emit_int (Nativeint.to_int n)}\n`
+    | Cint32 n           -> `  .long    {emit_printf "0x%nx" n}\n`
+    | Cint n             -> `  .quad    {emit_printf "0x%nx" n}\n`
     | Csymbol_address s  -> `  .quad    {emit_symbol s}\n`
-    | Csingle f          -> `  .float   {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
-    | Cdouble f          -> `  .double  {emit_printf "0x%Lx\n" (Int64.bits_of_float f)}\n`
+    | Csingle f          -> `  .float   {emit_printf "0x%Lx" (Int64.bits_of_float f)}\n`
+    | Cdouble f          -> `  .double  {emit_printf "0x%Lx" (Int64.bits_of_float f)}\n`
     );
     `  .end\n`;
     `\n`
