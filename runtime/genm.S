@@ -411,18 +411,9 @@ caml_exn_val:
   .text
   .globl caml_start_program
 caml_start_program:
-  mov.i64           $0, caml_program
-  mov.i64           $1, caml_start_program_impl
-  undef.i64         $2
-  tcall.i64.c       $1, $0, $2, $2, $2, $2
-
-################################################################################
-# caml_start_program_impl
-################################################################################
-caml_start_program_impl:
   .call             c
   .stack            48
-  .args             0, i64, i64, i64, i64, i64
+  .args             0
 .Lentry:
   # Save global variables.
   frame.i64         $40, 40
@@ -455,12 +446,8 @@ caml_start_program_impl:
   st.8              [$6], $51         # Pointer to this structure.
 
   # Invoke the OCaml program.
-  arg.i64           $90, 0
-  arg.i64           $91, 1
-  arg.i64           $92, 2
-  arg.i64           $93, 3
-  arg.i64           $94, 4
-  invoke.i64.ocaml  $55, $90, $91, $92, $93, $94, .Lhandler @caml_root_frame
+  mov.i64           $90, caml_program
+  invoke.i64.ocaml  $55, $90, .Lhandler @caml_root_frame
 
 .Lreturn:
   phi.i64           $300, .Lentry, $55, .Lhandler, $203
@@ -487,6 +474,78 @@ caml_start_program_impl:
   mov.i64           $202, 2
   or.i64            $203, $201, $202
   jmp               .Lreturn
+
+################################################################################
+# caml_start_program_impl
+################################################################################
+caml_start_program_impl:
+  .call             c
+  .stack            48
+  .args             0, i64, i64, i64, i64, i64
+.Lentry_impl:
+  # Save global variables.
+  frame.i64         $40, 40
+  mov.i64           $0, caml_gc_regs
+  ld.8.i64          $1, [$0]
+  st.8              [$40], $1
+
+  frame.i64         $41, 32
+  mov.i64           $2, caml_last_return_address
+  ld.8.i64          $3, [$2]
+  st.8              [$41], $3
+
+  frame.i64         $42, 24
+  mov.i64           $4, caml_bottom_of_stack
+  ld.8.i64          $5, [$4]
+  st.8              [$42], $5
+
+
+  # Create an exception frame.
+  frame.i64         $51, 0            # Pointer to handler.
+  mov.i64           $54, .Lhandler_impl
+  st.8              [$51], $54
+  frame.i64         $52, 8            # Pointer to stack frame.
+  mov.i64           $55, $sp
+  st.8              [$52], $55
+  frame.i64         $53, 16           # Pointer to exn chain.
+  mov.i64           $6, caml_exception_pointer
+  ld.8.u64          $56, [$6]
+  st.8              [$53], $56
+  st.8              [$6], $51         # Pointer to this structure.
+
+  # Invoke the OCaml program.
+  arg.i64           $90, 0
+  arg.i64           $91, 1
+  arg.i64           $92, 2
+  arg.i64           $93, 3
+  arg.i64           $94, 4
+  invoke.i64.ocaml  $55, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root_frame
+
+.Lreturn_impl:
+  phi.i64           $300, .Lentry_impl, $55, .Lhandler_impl, $203
+
+  # Restore global variables, popping the handler.
+  ld.8.i64          $400, [$53]
+  st.8              [$6], $400
+
+  ld.8.i64          $401, [$42]
+  st.8              [$4], $401
+
+  ld.8.i64          $402, [$41]
+  st.8              [$2], $402
+
+  ld.8.i64          $403, [$40]
+  st.8              [$0], $403
+
+  ret.i64           $300
+
+.Lhandler_impl:
+  # Exception handler, marks value as exception.
+  mov.i64           $200, caml_exn_val
+  ld.8.i64          $201, [$200]
+  mov.i64           $202, 2
+  or.i64            $203, $201, $202
+  jmp               .Lreturn_impl
 
 
 ################################################################################
