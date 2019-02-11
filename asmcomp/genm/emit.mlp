@@ -24,7 +24,7 @@ open Reg
 
 type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: (int option) list }
 
-let emit_symbol s = emit_string "_"; Emitaux.emit_symbol '$' s
+let emit_symbol s = Emitaux.emit_symbol '$' s
 
 (* Flag to enable inlining small allocations *)
 let inline_alloc = ref false
@@ -33,7 +33,7 @@ let inline_raise = ref false
 
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
-let emit_linear fast body =
+let emit_linear body =
   let bound_error_labels = ref [] in
   let gc_sites = ref [] in
 
@@ -300,34 +300,13 @@ let emit_linear fast body =
         `  st.{emit_string instr} [{emit_temp addr}], {emit_reg arg.(0)}\n`
       );
     | Ialloc { words } ->
-      if fast && !inline_alloc then begin
-        let gc_ret = new_label () in
-        let gc_lbl = new_label () in
-        `{emit_label gc_ret}:\n`;
-        let young_lim = make_temp () in
-        let young_ptr = make_temp () in
-        let new_ptr = make_temp () in
-        let flag = make_temp () in
-        let immw = emit_const words in
-        let addr_young_lim = emit_addr "caml_young_limit" in
-        let addr_young_ptr = emit_addr "caml_young_ptr" in
-        `  ld.8.i64 {emit_temp young_lim}, [{emit_temp addr_young_lim}]\n`;
-        `  ld.8.i64 {emit_temp young_ptr}, [{emit_temp addr_young_ptr}]\n`;
-        `  sub.i64 {emit_temp new_ptr}, {emit_temp young_ptr}, {emit_temp immw}\n`;
-        `  cmp.lt.i32 {emit_temp flag}, {emit_temp new_ptr}, {emit_temp young_lim}\n`;
-        `  jt {emit_temp flag}, {emit_label gc_lbl}\n`;
-        let imm8 = emit_const 8 in
-        `  add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp imm8}{emit_value res}\n`;
-        gc_sites := { gc_lbl; gc_ret; gc_exc = !handlers } :: !gc_sites
-      end else begin
-        let args = match words with
-          | 16 -> [emit_addr "caml_alloc1"]
-          | 24 -> [emit_addr "caml_alloc2"]
-          | 32 -> [emit_addr "caml_alloc3"]
-          | _  -> [emit_addr "caml_allocN"; emit_const words]
-        in
-        `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
-      end
+      let args = match words with
+        | 16 -> [emit_addr "caml_alloc1"]
+        | 24 -> [emit_addr "caml_alloc2"]
+        | 32 -> [emit_addr "caml_alloc3"]
+        | _  -> [emit_addr "caml_allocN"; emit_const words]
+      in
+      `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) op
     | Iintop_imm(op, n) ->
@@ -481,35 +460,6 @@ let emit_linear fast body =
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
     | Lraise(raise) ->
       (match raise with
-      | Cmm.Raise_notrace when !inline_raise && no_handler !handlers ->
-        let exc_val = make_temp () in
-        let ret_val = make_temp () in
-        let jmp_frame = make_temp () in
-        let sp_frame = make_temp () in
-        let exc_frame = make_temp () in
-        let next_sp = make_temp () in
-        let offset = emit_const 8 in
-        let exc_addr = emit_addr "caml_exception_pointer" in
-        let val_addr = emit_addr "caml_exn_val" in
-
-        (* Store the exception being raised. *)
-        `  st.8 [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
-
-        `  ld.8.i64 {emit_temp jmp_frame}, [{emit_temp exc_addr}]\n`;
-        `  add.i64 {emit_temp sp_frame}, {emit_temp jmp_frame}, {emit_temp offset}\n`;
-        `  add.i64 {emit_temp exc_frame}, {emit_temp sp_frame}, {emit_temp offset}\n`;
-
-        `  ld.8.i64 {emit_temp next_sp}, [{emit_temp sp_frame}]\n`;
-        `  set.i64 $sp, {emit_temp next_sp}\n`;
-
-        `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
-        `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`;
-
-        `  ld.8.i64 {emit_temp ret_val}, [{emit_temp jmp_frame}]\n`;
-        `  ji {emit_temp ret_val}\n`
-      | Cmm.Raise_notrace when !inline_raise ->
-        (* TODO: not implemented *)
-        assert false
       | _ when no_handler !handlers ->
         let exn = emit_addr "caml_raise_exception" in
         `  tcall.c {emit_temp exn}{emit_regs arg ", " ""} @caml_raise_frame\n`;
@@ -606,7 +556,7 @@ let fundecl f =
   `  .globl {emit_symbol f.fun_name}\n`;
   `{emit_symbol f.fun_name}:\n`;
   `  .call ocaml\n`;
-  emit_linear f.fun_fast f.fun_body;
+  emit_linear f.fun_body;
   `\n`
 
 let begin_assembly () =
