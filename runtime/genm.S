@@ -414,6 +414,7 @@ caml_start_program:
   .call             c
   .stack            48
   .args             0
+  .noinline
 .Lentry:
   # Save global variables.
   frame.i64         $40, 40
