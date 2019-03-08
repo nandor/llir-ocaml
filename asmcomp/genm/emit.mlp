@@ -342,9 +342,7 @@ let emit_linear body =
     | Lreloadretaddr ->
       ()
     | Lreturn ->
-      let nargs = Array.length arg in
-      let types = String.concat "" (List.init nargs (fun _ -> ".i64")) in
-      `  ret{emit_string types}{emit_regs arg " " ""}\n`;
+      `  ret {emit_regs arg " " ""}\n`;
     | Llabel(label) ->
       current_block := label;
       `{emit_label label}:\n`
@@ -446,7 +444,7 @@ let emit_linear body =
       `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
       `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
       `  st.8 [{emit_temp exc_frame}], {emit_temp exc_val}\n`;
-      `  mov.i64 {emit_temp sp_val}, $sp\n`;
+      `  mov.i64 {emit_temp sp_val}, $rsp\n`;
       `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
       `  st.8 [{emit_temp exc_addr}], {emit_temp jmp_frame}\n`
     | Lpoptrap ->
@@ -481,7 +479,7 @@ let emit_linear body =
     | { arg; res; desc; next = { desc = Lend } } when not (is_terminator desc) ->
         emit_instr arg res desc;
         `  mov.i64 $5000, 1\n`;
-        `  ret.i64 $5000\n`
+        `  ret     $5000\n`
     | instr ->
       emit_instr instr.arg instr.res instr.desc;
       emit instr.next
