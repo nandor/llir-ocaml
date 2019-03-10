@@ -216,7 +216,7 @@ let call_linker mode output_name files extra =
           | None, Partial -> assert false
           )
           (Filename.quote output_name)
-          ""  (*(Clflags.std_include_flag "-I")*)
+          (Clflags.std_include_flag "-I")
           (quote_prefixed "-L" (Load_path.get_paths ()))
           (String.concat " " (List.rev !Clflags.all_ccopts))
           (quote_files files)
