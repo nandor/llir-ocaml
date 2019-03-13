@@ -20,6 +20,7 @@
   .text
   .globl caml_collect
 caml_collect:
+  .visibility extern
   .call c
   .stack 104
 
