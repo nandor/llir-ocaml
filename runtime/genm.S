@@ -120,7 +120,7 @@ caml_collect:
   .text
   .globl caml_alloc1
 caml_alloc1:
-  .call       c
+  .call       caml_alloc
   .args       0
 .Lalloc1:
   mov.i64     $0, caml_young_ptr
@@ -158,7 +158,7 @@ caml_alloc1:
   .text
   .globl caml_alloc2
 caml_alloc2:
-  .call       c
+  .call       caml_alloc
   .args       0
 .Lalloc2:
   mov.i64     $0, caml_young_ptr
@@ -196,7 +196,7 @@ caml_alloc2:
   .text
   .globl caml_alloc3
 caml_alloc3:
-  .call       c
+  .call       caml_alloc
   .args       0
 .Lalloc3:
   mov.i64     $0, caml_young_ptr
@@ -234,7 +234,7 @@ caml_alloc3:
   .text
   .globl caml_allocN
 caml_allocN:
-  .call       c
+  .call       caml_alloc
   .args       0, i64
 .LallocN:
   mov.i64     $0, caml_young_ptr
@@ -272,7 +272,7 @@ caml_allocN:
   .text
   .globl caml_c_call_i64
 caml_c_call_i64:
-  .call       ext
+  .call       caml_ext
   .args       0, i64, i64
 
   mov.i64     $3, $ret_addr
@@ -293,7 +293,7 @@ caml_c_call_i64:
   .text
   .globl caml_c_call_i64_i64
 caml_c_call_i64_i64:
-  .call       ext
+  .call       caml_ext
   .args       0, i64, i64, i64
 
   mov.i64     $3, $ret_addr
@@ -315,7 +315,7 @@ caml_c_call_i64_i64:
   .text
   .globl caml_c_call_i64_i64_i64
 caml_c_call_i64_i64_i64:
-  .call       ext
+  .call       caml_ext
   .args       0, i64, i64, i64, i64
 
   mov.i64     $3, $ret_addr
@@ -338,7 +338,7 @@ caml_c_call_i64_i64_i64:
   .text
   .globl caml_c_call_i64_i64_i64_i64
 caml_c_call_i64_i64_i64_i64:
-  .call       ext
+  .call       caml_ext
   .args       0, i64, i64, i64, i64, i64
 
   mov.i64     $3, $ret_addr
@@ -362,7 +362,7 @@ caml_c_call_i64_i64_i64_i64:
   .text
   .globl caml_c_call_i64_i64_i64_i64_i64
 caml_c_call_i64_i64_i64_i64_i64:
-  .call       ext
+  .call       caml_ext
   .args       0, i64, i64, i64, i64, i64, i64
 
   mov.i64     $3, $ret_addr
@@ -549,7 +549,7 @@ caml_start_program:
 
   # Invoke the OCaml program.
   mov.i64           $90, caml_program
-  invoke.i64.ocaml  $55, $90, .Lhandler @caml_root_frame
+  invoke.i64.caml   $55, $90, .Lhandler @caml_root_frame
 
 .Lreturn:
   phi.i64           $300, .Lentry, $55, .Lhandler, $203
@@ -621,7 +621,7 @@ caml_start_program_impl:
   arg.i64           $92, 2
   arg.i64           $93, 3
   arg.i64           $94, 4
-  invoke.i64.ocaml  $55, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root_frame
+  invoke.i64.caml   $55, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root_frame
 
 .Lreturn_impl:
   phi.i64           $300, .Lentry_impl, $55, .Lhandler_impl, $203

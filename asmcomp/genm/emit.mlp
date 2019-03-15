@@ -224,18 +224,18 @@ let emit_linear body =
       `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}{emit_value res}\n`;
     | Icall_ind _ ->
       let types = call_types res in
-      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
+      `  {emit_call !handlers}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Icall_imm { func } ->
       let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  {emit_call !handlers}{emit_string types}.ocaml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
+      `  {emit_call !handlers}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Itailcall_ind(_) ->
-      `  tcall.i64.ocaml {emit_regs arg " " ""}\n`
+      `  tcall.i64.caml {emit_regs arg " " ""}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.i64.ocaml {emit_temp addr}{emit_regs arg ", " ""}\n`
+      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""}\n`
     | Iextcall { func; alloc } ->
       let res_types = call_types res in
       let addr = make_temp () in
@@ -251,7 +251,7 @@ let emit_linear body =
           |> String.concat "_"
         in
         `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call_"}{emit_string arg_types}\n`;
-        `  {emit_call !handlers}{emit_string res_types}.ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame{emit_value res}\n`
+        `  {emit_call !handlers}{emit_string res_types}.caml_ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_call_frame{emit_value res}\n`
       end else begin
         `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}{emit_value res}\n`
       end
@@ -306,7 +306,7 @@ let emit_linear body =
         | 32 -> [emit_addr "caml_alloc3"]
         | _  -> [emit_addr "caml_allocN"; emit_const words]
       in
-      `  {emit_call !handlers}.i64.c {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
+      `  {emit_call !handlers}.i64.caml_alloc {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_call_frame{emit_value res}\n`
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) op
     | Iintop_imm(op, n) ->
@@ -553,7 +553,7 @@ let fundecl f =
   `  .text\n`;
   `  .globl {emit_symbol f.fun_name}\n`;
   `{emit_symbol f.fun_name}:\n`;
-  `  .call ocaml\n`;
+  `  .call\tcaml\n`;
   emit_linear f.fun_body;
   `\n`
 
