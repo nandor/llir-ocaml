@@ -549,7 +549,7 @@ caml_start_program:
 
   # Invoke the OCaml program.
   mov.i64           $90, caml_program
-  invoke.i64.caml   $55, $90, .Lhandler @caml_root_frame
+  invoke.i64.caml   $55, $90, .Lhandler @caml_root
 
 .Lreturn:
   phi.i64           $300, .Lentry, $55, .Lhandler, $203
@@ -621,7 +621,7 @@ caml_start_program_impl:
   arg.i64           $92, 2
   arg.i64           $93, 3
   arg.i64           $94, 4
-  invoke.i64.caml   $55, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root_frame
+  invoke.i64.caml   $55, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root
 
 .Lreturn_impl:
   phi.i64           $300, .Lentry_impl, $55, .Lhandler_impl, $203
