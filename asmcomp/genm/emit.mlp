@@ -43,15 +43,11 @@ let emit_linear body =
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r; typ } ->
-        let ty = match typ with
-          | Val | Int | Addr -> "i64"
-          | Float -> "f64"
-        in
         let n =  Proc.num_available_registers.(0) in
         if r >= n then begin
           match r land 7 with
           | 0 -> (* argument *) ()
-          | 1 -> (* param *)    Hashtbl.replace params r (((r - n) lsr 3), ty)
+          | 1 -> (* param *)    Hashtbl.replace params r (((r - n) lsr 3), typ)
           | 2 -> (* result *)   ()
           | _ -> assert false
         end else
@@ -103,11 +99,11 @@ let emit_linear body =
       assert false
   in
 
-  let emit_typ = function
-    | { typ = Float} -> emit_string "f64"
-    | { typ = Val } -> emit_string "i64"
-    | { typ = Addr } -> emit_string "i64"
-    | { typ = Int } -> emit_string "i64"
+  let emit_type = function
+    | Float-> emit_string "f64"
+    | Val -> emit_string "i64"
+    | Addr -> emit_string "i64"
+    | Int -> emit_string "i64"
   in
 
   let emit_regs regs st en =
@@ -213,7 +209,7 @@ let emit_linear body =
 
   let emit_op arg res = function
     | Imove ->
-      `  mov.{emit_typ res.(0)} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
+      `  mov.{emit_type res.(0).typ} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
     | Ispill  -> assert false
     | Ireload -> assert false
     | Iconst_int(n) ->
@@ -501,11 +497,14 @@ let emit_linear body =
       Hashtbl.fold (fun arg (idx, ty) acc -> (idx, arg, ty) :: acc) params []
   ) in
   `  .args 0`;
-  arg_list |> List.iter (fun (_, _, ty) -> `, {emit_string ty}`);
+  arg_list |> List.iter (fun (_, _, ty) -> `, {emit_type ty}`);
   `\n`;
-  arg_list |> List.iter (fun (idx, arg, ty) ->
-    `  arg.{emit_string ty} ${emit_int arg}, {emit_int idx}\n`
-  );
+  arg_list |> List.iter
+    (fun (idx, arg, ty) -> match ty with
+    | Float ->      `  arg.f64 ${emit_int arg}, {emit_int idx}\n`
+    | Val ->        `  arg.i64 ${emit_int arg}, {emit_int idx} @caml_value\n`
+    | Addr | Int -> `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
+    );
 
   emit body;
 
