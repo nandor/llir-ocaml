@@ -165,7 +165,7 @@ let emit_linear body =
 
   let emit_intop res lhs rhs op =
     let emit inst =
-      `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`
+      `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}{emit_value res}\n`
     in
     match op with
     | Iadd    -> emit "add"
@@ -421,7 +421,7 @@ let emit_linear body =
       `  jmp {emit_label label}\n`;
       `{emit_label handler}:\n`;
       `  mov.i64 {emit_temp val_addr}, caml_exn_val\n`;
-      `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
+      `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}] @caml_value\n`
     | Lpushtrap ->
       let handler =
         try Some (Hashtbl.find traps !current_block)

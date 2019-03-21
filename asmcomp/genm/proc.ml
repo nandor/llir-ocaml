@@ -35,8 +35,7 @@ let register i t typ =
   in
   Reg.at_location typ (Reg key)
 
-let phys_reg i =
-  register i Generic Int
+let phys_reg _ = assert false
 
 let op_is_pure _op =
   false
@@ -52,7 +51,7 @@ let max_register_pressure _arg = [| 13; 13 |]
 
 let max_arguments_for_tailcalls  = 10
 let loc_spacetime_node_hole = Reg.dummy
-let loc_exn_bucket = phys_reg 2000
+let loc_exn_bucket = register 2000 Generic Val
 
 
 let loc_arguments arg =
