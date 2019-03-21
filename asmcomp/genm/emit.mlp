@@ -126,6 +126,7 @@ let emit_linear body =
   let emit_value res = match res with
     | [| |] -> ()
     | [| { typ = Val } |] -> `\t@caml_value`
+    | [| { typ = Addr } |] -> `\t@caml_addr`
     | [| { typ = _ } |] -> ()
     | _ -> assert false
   in
