@@ -29,49 +29,6 @@
 #include "caml/stacks.h"
 #include "caml/signals.h"
 
-#define Setup_for_gc
-#define Restore_after_gc
-
-#define Alloc_small_with_profinfo(result, wosize, tag, profinfo) do { \
-  CAMLassert ((wosize) >= 1); \
-  CAMLassert ((tag_t) (tag) < 256); \
-  CAMLassert ((wosize) <= Max_young_wosize); \
-  caml_young_ptr -= Whsize_wosize (wosize); \
-  if (caml_young_ptr < caml_young_trigger){ \
-    caml_young_ptr += Whsize_wosize (wosize); \
-    CAML_INSTR_INT ("force_minor/alloc_small@", 1); \
-    Setup_for_gc; \
-    caml_gc_dispatch (); \
-    Restore_after_gc; \
-    caml_young_ptr -= Whsize_wosize (wosize); \
-  } \
-  Hd_hp (caml_young_ptr) = \
-    Make_header_with_profinfo ((wosize), (tag), Caml_black, profinfo); \
-  (result) = Val_hp (caml_young_ptr); \
-  DEBUG_clear ((result), (wosize)); \
-}while(0)
-
-#if defined(NATIVE_CODE) && defined(WITH_SPACETIME)
-extern uintnat caml_spacetime_my_profinfo(struct ext_table**, uintnat);
-#define Alloc_small(result, wosize, tag) \
-  Alloc_small_with_profinfo(result, wosize, tag, \
-    caml_spacetime_my_profinfo(NULL, wosize))
-#else
-#define Alloc_small(result, wosize, tag) \
-  Alloc_small_with_profinfo(result, wosize, tag, (uintnat) 0)
-#endif
-
-CAMLexport value caml_alloc_small (mlsize_t wosize, tag_t tag)
-{
-  value result;
-
-  CAMLassert (wosize > 0);
-  CAMLassert (wosize <= Max_young_wosize);
-  CAMLassert (tag < 256);
-  Alloc_small (result, wosize, tag);
-  return result;
-}
-
 CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
 {
   value result;
@@ -83,7 +40,7 @@ CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
     if (wosize == 0){
       result = Atom (tag);
     }else{
-      result = caml_alloc_small (wosize, tag);
+      Alloc_small (result, wosize, tag);
       if (tag < No_scan_tag){
         for (i = 0; i < wosize; i++) Field (result, i) = Val_unit;
       }
@@ -95,6 +52,17 @@ CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
     }
     result = caml_check_urgent_gc (result);
   }
+  return result;
+}
+
+CAMLexport value caml_alloc_small (mlsize_t wosize, tag_t tag)
+{
+  value result;
+
+  CAMLassert (wosize > 0);
+  CAMLassert (wosize <= Max_young_wosize);
+  CAMLassert (tag < 256);
+  Alloc_small (result, wosize, tag);
   return result;
 }
 
@@ -129,7 +97,7 @@ CAMLexport value caml_alloc_string (mlsize_t len)
   mlsize_t wosize = (len + sizeof (value)) / sizeof (value);
 
   if (wosize <= Max_young_wosize) {
-    result = caml_alloc_small (wosize, String_tag);
+    Alloc_small (result, wosize, String_tag);
   }else{
     result = caml_alloc_shr (wosize, String_tag);
     result = caml_check_urgent_gc (result);
@@ -201,7 +169,7 @@ value caml_alloc_float_array(mlsize_t len)
     if (wosize == 0)
       return Atom(0);
     else
-      result = caml_alloc_small (wosize, Double_array_tag);
+      Alloc_small (result, wosize, Double_array_tag);
   }else {
     result = caml_alloc_shr (wosize, Double_array_tag);
     result = caml_check_urgent_gc (result);

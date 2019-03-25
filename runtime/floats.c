@@ -148,7 +148,7 @@ void caml_free_locale(void)
 CAMLexport value caml_copy_double(double d)
 {
   value res;
-  res = caml_alloc_small(Double_wosize, Double_tag);
+  Alloc_small(res, Double_wosize, Double_tag);
   Store_double_val(res, d);
   return res;
 }

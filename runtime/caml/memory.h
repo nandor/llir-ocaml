@@ -256,8 +256,6 @@ extern uintnat caml_spacetime_my_profinfo(struct ext_table**, uintnat);
 #define Alloc_small_no_track(result, wosize, tag) \
   Alloc_small_aux(result, wosize, tag, (uintnat) 0, CAML_DONT_TRACK)
 
-#endif
-
 /* Deprecated alias for [caml_modify] */
 
 #define Modify(fp,val) caml_modify((fp), (val))

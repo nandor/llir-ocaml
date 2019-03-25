@@ -38,16 +38,14 @@
   (Classify_addr(a) & (In_heap | In_young | In_static_data))
 
 #define Is_in_code_area(pc) \
- (    ((char *)(pc) >= caml_code_start && \
-       (char *)(pc) <= caml_code_end)     \
+ (    ((char *)(pc) >= caml_code_area_start && \
+       (char *)(pc) <= caml_code_area_end)     \
    || (Classify_addr(pc) & In_code_area) )
 
 #define Is_in_static_data(a) (Classify_addr(a) & In_static_data)
 
 /***********************************************************************/
 /* The rest of this file is private and may change without notice. */
-
-extern char * caml_code_area_start, * caml_code_area_end;
 
 #define Not_in_heap 0
 #define In_heap 1

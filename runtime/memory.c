@@ -87,6 +87,22 @@ static struct page_table caml_page_table;
 #endif
 #define Hash(v) (((v) * HASH_FACTOR) >> caml_page_table.shift)
 
+value caml_alloc_young(mlsize_t wosize, tag_t tag, uintnat profinfo)
+{
+  caml_young_ptr -= Whsize_wosize (wosize);
+  if (caml_young_ptr < caml_young_trigger) {
+    caml_young_ptr += Whsize_wosize (wosize);
+    CAML_INSTR_INT ("force_minor/alloc_small@", 1);
+    caml_gc_dispatch ();
+    caml_young_ptr -= Whsize_wosize (wosize);
+  }
+
+  value block = Val_hp(caml_young_ptr);
+  Hd_val(block) = Make_header_with_profinfo (wosize, tag, Caml_black, profinfo);
+  DEBUG_clear(block, wosize);
+  return block;
+}
+
 int caml_page_table_lookup(void * addr)
 {
   uintnat h, e;
