@@ -267,6 +267,26 @@ caml_allocN:
   jmp           .LallocN
 
 ################################################################################
+# caml_c_call
+################################################################################
+  .text
+  .globl caml_c_call
+caml_c_call:
+  .call       caml_ext
+  .args       0, i64
+
+  mov.i64     $3, $ret_addr
+  mov.i64     $4, caml_last_return_address
+  st.8        [$4], $3
+
+  mov.i64     $7, $frame_addr
+  mov.i64     $6, caml_bottom_of_stack
+  st.8        [$6], $7
+
+  arg.i64     $8, 0
+  tcall.i64.c $8
+
+################################################################################
 # caml_c_call_i64
 ################################################################################
   .text
@@ -430,7 +450,9 @@ caml_call_gc:
   .text
   .globl caml_ml_array_bound_error
 caml_ml_array_bound_error:
-  trap
+  mov.i64            $1, caml_c_call
+  mov.i64            $2, caml_array_bound_error
+  tcall.i64.caml_ext $1, $2
 
 ################################################################################
 # caml_callback_exn
