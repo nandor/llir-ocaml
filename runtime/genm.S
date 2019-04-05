@@ -433,7 +433,7 @@ caml_c_call_i64_i64_i64_i64_i64_i64:
   .text
   .globl caml_ml_array_bound_error
 caml_ml_array_bound_error:
-  .call              caml
+  .call              caml_raise
 
   mov.i64            $1, caml_c_call
   mov.i64            $2, caml_array_bound_error
