@@ -22,8 +22,6 @@ open Linearize
 open Emitaux
 open Reg
 
-type alloc_site = { gc_lbl: label; gc_ret: label; gc_exc: (int option) list }
-
 let emit_symbol s = Emitaux.emit_symbol '$' s
 
 (* Flag to enable inlining small allocations *)
@@ -35,7 +33,6 @@ let emit_label lbl = emit_string ".L"; emit_int lbl
 
 let emit_linear body =
   let bound_error_labels = ref [] in
-  let gc_sites = ref [] in
 
   (* Find the next available virtual register *)
   let next_reg = ref 0 in
@@ -460,7 +457,8 @@ let emit_linear body =
         `  tcall.c {emit_temp exn}{emit_regs arg ", " ""}\n`;
       | _ ->
         let exn = emit_addr "caml_raise_exception" in
-        `  tinvoke.c {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers}\n`;
+        `  invoke.c {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers}\n`;
+        `  trap\n`;
       )
   in
   let is_terminator = function
@@ -509,21 +507,16 @@ let emit_linear body =
 
   emit body;
 
-  (* Emit calls to all GC sites *)
-  !gc_sites |> List.iter (fun { gc_lbl; gc_ret } ->
-    `{emit_label gc_lbl}:\n`;
-    let addr = emit_addr "caml_call_gc" in
-    `  call.c {emit_temp addr} @caml_frame\n`;
-    `  jmp {emit_label gc_ret}\n`
-  );
-
   (* Emit bound error call *)
   !bound_error_labels |> List.iter (fun (handler, label) ->
     `{emit_label label}:\n`;
     let addr = emit_addr "caml_ml_array_bound_error" in
     match handler with
-    | None   -> `  tcall.c {emit_temp addr}\n`
-    | Some h -> `  tinvoke.c {emit_temp addr}, {emit_label h}\n`
+    | None   ->
+      `  tcall.c {emit_temp addr}\n`
+    | Some h ->
+      `  invoke.c {emit_temp addr}, {emit_label h}\n`;
+      `  trap\n`
     )
 
 let data = function

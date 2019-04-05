@@ -428,28 +428,13 @@ caml_c_call_i64_i64_i64_i64_i64_i64:
   tcall.i64.c $10, $11, $12, $13, $14, $15, $16
 
 ################################################################################
-# caml_call_gc
-################################################################################
-  .text
-  .globl caml_call_gc
-caml_call_gc:
-  mov.i64           $3, $ret_addr
-  mov.i64           $4, caml_last_return_address
-  st.8              [$4], $3
-
-  mov.i64           $5, $frame_addr
-  mov.i64           $6, caml_bottom_of_stack
-  st.8              [$6], $5
-
-  mov.i64           $7, caml_collect
-  tcall.caml_gc     $7
-
-################################################################################
 # caml_ml_array_bound_error
 ################################################################################
   .text
   .globl caml_ml_array_bound_error
 caml_ml_array_bound_error:
+  .call              caml
+
   mov.i64            $1, caml_c_call
   mov.i64            $2, caml_array_bound_error
   tcall.i64.caml_ext $1, $2
