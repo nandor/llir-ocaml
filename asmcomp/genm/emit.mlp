@@ -201,7 +201,7 @@ let emit_linear body =
           label
       in
       let flag = make_temp () in
-      `  cmp.le.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  cmp.ule.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
