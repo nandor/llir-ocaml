@@ -35,12 +35,12 @@ let emit_linear body =
   let bound_error_labels = ref [] in
 
   (* Find the next available virtual register *)
-  let next_reg = ref 0 in
+  let next_reg = ref 15000 in
   let params = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r; typ } ->
-        let n =  Proc.num_available_registers.(0) in
+        let n =  10000 in
         if r >= n then begin
           match r land 7 with
           | 0 -> (* argument *) ()

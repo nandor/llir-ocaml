@@ -28,9 +28,9 @@ let rotate_registers = false
 
 let register i t typ =
   let key = match t with
-    | Arg     -> num_regs + ((i lsl 3) lor 0)
-    | Param   -> num_regs + ((i lsl 3) lor 1)
-    | Result  -> num_regs + ((i lsl 3) lor 2)
+    | Arg     -> 10000 + ((i lsl 3) lor 0)
+    | Param   -> 10000 + ((i lsl 3) lor 1)
+    | Result  -> 10000 + ((i lsl 3) lor 2)
     | Generic -> i
   in
   Reg.at_location typ (Reg key)
@@ -51,7 +51,7 @@ let max_register_pressure _arg = [| 13; 13 |]
 
 let max_arguments_for_tailcalls  = 10
 let loc_spacetime_node_hole = Reg.dummy
-let loc_exn_bucket = register 2000 Generic Val
+let loc_exn_bucket = register 20000 Generic Val
 
 
 let loc_arguments arg =
