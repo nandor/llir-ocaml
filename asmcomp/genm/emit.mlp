@@ -24,11 +24,6 @@ open Reg
 
 let emit_symbol s = Emitaux.emit_symbol '$' s
 
-(* Flag to enable inlining small allocations *)
-let inline_alloc = ref false
-(* Flag to enable inlining exception throwing statements *)
-let inline_raise = ref false
-
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
 let emit_linear body =
