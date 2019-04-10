@@ -541,7 +541,19 @@ caml_raise_exception:
   st.8        [$14], $21
   ji          $19
 .Lactive:
-  trap
+  arg.i64     $10, 0
+
+  mov.i64     $11, caml_last_return_address
+  ld.8.i64    $12, [$11]
+  mov.i64     $13, caml_bottom_of_stack
+  ld.8.i64    $14, [$13]
+  mov.i64     $15, caml_exception_pointer
+  ld.8.i64    $16, [$15]
+
+  mov.i64     $17, caml_stash_backtrace
+  call.c      $17, $10, $12, $14, $16
+
+  jmp .Lthrow
 
 ################################################################################
 # caml_exn_val
