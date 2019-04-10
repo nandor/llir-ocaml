@@ -22,7 +22,7 @@
 caml_collect:
   .visibility extern
   .call caml_gc
-  .stack 104
+  .stack 120
 
   frame.i64   $0, 0
   mov.i64     $1, $rax
@@ -63,6 +63,12 @@ caml_collect:
   frame.i64   $0, 96
   mov.i64     $1, $rbp
   st.8        [$0], $1
+  frame.i64   $0, 104
+  mov.i64     $1, $r14
+  st.8        [$0], $1
+  frame.i64   $0, 112
+  mov.i64     $1, $r15
+  st.8        [$0], $1
 
   mov.i64     $0, caml_gc_regs
   frame.i64   $1, 0
@@ -71,6 +77,12 @@ caml_collect:
   mov.i64     $2, caml_garbage_collection
   call.c      $2
 
+  frame.i64   $0, 112
+  ld.8.i64    $1, [$0]
+  set         $r15, $1
+  frame.i64   $0, 104
+  ld.8.i64    $1, [$0]
+  set         $r14, $1
   frame.i64   $0, 96
   ld.8.i64    $1, [$0]
   set         $rbp, $1
