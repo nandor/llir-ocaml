@@ -220,11 +220,11 @@ let emit_linear body =
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       `  {emit_call !handlers}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_frame{emit_value res}\n`
     | Itailcall_ind(_) ->
-      `  tcall.i64.caml {emit_regs arg " " ""}\n`
+      `  tcall.i64.caml {emit_regs arg " " ""} @caml_frame\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""}\n`
+      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""} @caml_frame\n`
     | Iextcall { func; alloc } ->
       let res_types = call_types res in
       let addr = make_temp () in
