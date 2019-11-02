@@ -482,9 +482,14 @@ let emit_linear body =
     | { next } -> sizeof_frame n m next
   in
 
-  let frame_size = 8 * 3 * sizeof_frame 0 0 body in
+  let frame_objs = sizeof_frame 0 0 body in
+  let frame_size = 8 * 3 * frame_objs in
   if frame_size <> 0 then
     `  .stack {emit_int frame_size}\n`;
+
+  for i = 0 to frame_objs - 1 do
+    `  .stack_object {emit_int (8 * 3 * i)}, 24\n`;
+  done;
 
   find_regs body;
   let arg_list = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) (
