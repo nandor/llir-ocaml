@@ -257,10 +257,10 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
   Array.iteri
     (fun i name -> compile_phrase (Cmm_helpers.predef_exception i name))
     Runtimedef.builtin_exceptions;
+  compile_phrase (Cmm_helpers.global_table name_list);
+  let globals_map = make_globals_map units_list ~crc_interfaces in
+  compile_phrase (Cmm_helpers.globals_map globals_map);
   if not Config.llir then begin
-    compile_phrase (Cmm_helpers.global_table name_list);
-    let globals_map = make_globals_map units_list ~crc_interfaces in
-    compile_phrase (Cmm_helpers.globals_map globals_map);
     compile_phrase(Cmm_helpers.data_segment_table ("_startup" :: name_list));
     if !Clflags.function_sections then
       compile_phrase

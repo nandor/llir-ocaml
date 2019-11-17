@@ -78,6 +78,8 @@ let rec regalloc ~ppf_dump round fd =
 
 let (++) x f = f x
 
+let (+-) x f = if Config.llir then f x else x
+
 let compile_fundecl ~ppf_dump fd_cmm =
   Proc.init ();
   Reg.reset();
@@ -90,15 +92,15 @@ let compile_fundecl ~ppf_dump fd_cmm =
   ++ pass_dump_if ppf_dump dump_cse "After CSE"
   ++ Profile.record ~accumulate:true "liveness" liveness
   ++ Profile.record ~accumulate:true "deadcode" Deadcode.fundecl
-  ++ pass_dump_if ppf_dump dump_live "Liveness analysis"
-  ++ Profile.record ~accumulate:true "spill" Spill.fundecl
-  ++ Profile.record ~accumulate:true "liveness" liveness
-  ++ pass_dump_if ppf_dump dump_spill "After spilling"
-  ++ Profile.record ~accumulate:true "split" Split.fundecl
-  ++ pass_dump_if ppf_dump dump_split "After live range splitting"
-  ++ Profile.record ~accumulate:true "liveness" liveness
-  ++ Profile.record ~accumulate:true "regalloc" (regalloc ~ppf_dump 1)
-  ++ Profile.record ~accumulate:true "available_regs" Available_regs.fundecl
+  ++ pass_dump_if ppf dump_live "Liveness analysis"
+  +- Profile.record ~accumulate:true "spill" Spill.fundecl)
+  +- Profile.record ~accumulate:true "liveness" (liveness ppf)
+  +- pass_dump_if ppf dump_spill "After spilling"
+  +- Profile.record ~accumulate:true "split" Split.fundecl
+  +- pass_dump_if ppf_dump dump_split "After live range splitting"
+  +- Profile.record ~accumulate:true "liveness" liveness
+  +- Profile.record ~accumulate:true "regalloc" (regalloc ~ppf_dump 1)
+  +- Profile.record ~accumulate:true "available_regs" Available_regs.fundecl
   ++ Profile.record ~accumulate:true "linearize" Linearize.fundecl
   ++ pass_dump_linear_if ppf_dump dump_linear "Linearized code"
   ++ Profile.record ~accumulate:true "scheduling" Scheduling.fundecl
@@ -160,6 +162,7 @@ let end_gen_implementation ?toplevel ~ppf_dump
      when part of a C library, won't be discarded by the linker.
      This is important if a module that uses such a symbol is later
      dynlinked. *)
+<<<<<<< HEAD
   if not Config.llir then begin
     compile_phrase ~ppf_dump
       (Cmm_helpers.reference_symbols
@@ -180,6 +183,62 @@ type middle_end =
 
 let compile_implementation ?toplevel ~backend ~filename ~prefixname ~middle_end
       ~ppf_dump (program : Lambda.program) =
+=======
+  if not Config.genm then begin
+    compile_phrase ppf
+      (Cmmgen.reference_symbols
+         (List.filter (fun s -> s <> "" && s.[0] <> '%')
+            (List.map Primitive.native_name !Translmod.primitive_declarations))
+      );
+  end;
+  Emit.end_assembly ()
+
+let flambda_gen_implementation ?toplevel ~backend ppf
+    (program:Flambda.program) =
+  let export = Build_export_info.build_transient ~backend program in
+  let (clambda, preallocated, constants) =
+    Profile.record_call "backend" (fun () ->
+      (program, export)
+      ++ Flambda_to_clambda.convert
+      ++ flambda_raw_clambda_dump_if ppf
+      ++ (fun { Flambda_to_clambda. expr; preallocated_blocks;
+                structured_constants; exported; } ->
+             (* "init_code" following the name used in
+                [Cmmgen.compunit_and_constants]. *)
+           Un_anf.apply expr ~what:"init_code", preallocated_blocks,
+           structured_constants, exported)
+      ++ set_export_info)
+  in
+  let constants =
+    List.map (fun (symbol, definition) ->
+        { Clambda.symbol = Linkage_name.to_string (Symbol.label symbol);
+          exported = true;
+          definition })
+      (Symbol.Map.bindings constants)
+  in
+  end_gen_implementation ?toplevel ppf
+    (clambda, preallocated, constants)
+
+let lambda_gen_implementation ?toplevel ppf
+    (lambda:Lambda.program) =
+  let clambda = Closure.intro lambda.main_module_block_size lambda.code in
+  let preallocated_block =
+    Clambda.{
+      symbol = Compilenv.make_symbol None;
+      exported = true;
+      tag = 0;
+      fields = List.init lambda.main_module_block_size (fun _ -> None);
+    }
+  in
+  let clambda_and_constants =
+    clambda, [preallocated_block], []
+  in
+  raw_clambda_dump_if ppf clambda_and_constants;
+  end_gen_implementation ?toplevel ppf clambda_and_constants
+
+let compile_implementation_gen ?toplevel prefixname
+    ~required_globals ppf gen_implementation program =
+>>>>>>> a765d5a40... [genm-ocaml] Guarded genm with flags.
   let asmfile =
     if !keep_asm_file || !Emitaux.binary_backend_available
     then prefixname ^ ext_asm

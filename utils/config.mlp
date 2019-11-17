@@ -139,6 +139,7 @@ let ext_dll = "%%EXT_DLL%%"
 
 let host = "%%HOST%%"
 let target = "%%TARGET%%"
+let genm = "%%TARGET%%" = "genm"
 
 let default_executable_name =
   match Sys.os_type with
