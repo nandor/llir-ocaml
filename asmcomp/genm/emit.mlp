@@ -407,9 +407,8 @@ let emit_linear body =
       let exn_addr = make_temp () in
       let jmp_frame = make_temp () in
       let val_addr = make_temp () in
-      let trap_idx = List.length !handlers * 3 * 8 in
       `  mov.i64 {emit_temp exn_addr}, {emit_label handler}\n`;
-      `  frame.i64 {emit_temp jmp_frame}, {emit_int (trap_idx + 0)}\n`;
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int (List.length !handlers)}, 0\n`;
       `  st.8 [{emit_temp jmp_frame}], {emit_temp exn_addr}\n`;
       `  jmp {emit_label label}\n`;
       `{emit_label handler}:\n`;
@@ -420,7 +419,6 @@ let emit_linear body =
         try Some (Hashtbl.find traps !current_block)
         with Not_found -> None
       in
-      let trap_idx = List.length !handlers * 3 * 8 in
       handlers := handler :: !handlers;
       let exc_addr = emit_addr "caml_exception_pointer" in
       let jmp_frame = make_temp () in
@@ -428,9 +426,10 @@ let emit_linear body =
       let exc_frame = make_temp () in
       let exc_val = make_temp () in
       let sp_val = make_temp () in
-      `  frame.i64 {emit_temp jmp_frame}, {emit_int (trap_idx + 0)}\n`;
-      `  frame.i64 {emit_temp sp_frame}, {emit_int (trap_idx + 8)}\n`;
-      `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
+      let obj = List.length !handlers - 1 in
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int obj}, 0\n`;
+      `  frame.i64 {emit_temp sp_frame}, {emit_int obj}, 8\n`;
+      `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
       `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
       `  st.8 [{emit_temp exc_frame}], {emit_temp exc_val}\n`;
       `  mov.i64 {emit_temp sp_val}, $rsp\n`;
@@ -438,11 +437,11 @@ let emit_linear body =
       `  st.8 [{emit_temp exc_addr}], {emit_temp jmp_frame}\n`
     | Lpoptrap ->
       handlers := List.tl !handlers;
-      let trap_idx = List.length !handlers * 3 * 8 in
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
       let exc_frame = make_temp () in
-      `  frame.i64 {emit_temp exc_frame}, {emit_int (trap_idx + 16)}\n`;
+      let obj = List.length !handlers in
+      `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
       `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
     | Lraise(raise) ->
@@ -483,12 +482,9 @@ let emit_linear body =
   in
 
   let frame_objs = sizeof_frame 0 0 body in
-  let frame_size = 8 * 3 * frame_objs in
-  if frame_size <> 0 then
-    `  .stack {emit_int frame_size}\n`;
 
   for i = 0 to frame_objs - 1 do
-    `  .stack_object {emit_int (8 * 3 * i)}, 24\n`;
+    `  .stack_object {emit_int i}, 24, 8\n`;
   done;
 
   find_regs body;
