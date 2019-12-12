@@ -139,7 +139,7 @@ extern uintnat (*caml_stack_usage_hook)(void);
 extern value * caml_globals[];
 extern char caml_globals_map[];
 extern intnat caml_globals_inited;
-#ifdef GENM
+#ifdef TARGET_genm
 extern intnat * caml_genm_frametable;
 #else
 extern intnat * caml_frametable[];

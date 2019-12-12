@@ -55,7 +55,7 @@ struct segment { char * begin; char * end; };
 
 static void init_static(void)
 {
-#ifdef GENM
+#ifdef TARGET_genm
   extern char *caml_data_begin, *caml_data_end;
   extern char *caml_code_begin, *caml_code_end;
 #else

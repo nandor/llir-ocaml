@@ -163,7 +163,7 @@ static void init_frame_descriptors(link *new_frametables)
 }
 
 void caml_init_frame_descriptors(void) {
-#ifdef GENM
+#ifdef TARGET_genm
   link *new_frametables = cons(caml_genm_frametable, NULL);
 #else
   intnat i;
