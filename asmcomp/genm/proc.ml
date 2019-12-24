@@ -19,11 +19,11 @@ open Reg
 
 type reg = Arg | Param | Result | Generic
 
-let num_regs = 1000
+let num_regs = 3000
 
-let num_register_classes = 1
-let num_available_registers = [| num_regs |]
-let first_available_register = [| 0 |]
+let num_register_classes = 2
+let num_available_registers = [| num_regs; num_regs |]
+let first_available_register = [| 0; num_regs |]
 let rotate_registers = false
 
 let register i t typ =
@@ -51,7 +51,7 @@ let max_register_pressure _arg = [| 13; 13 |]
 
 let max_arguments_for_tailcalls  = 10
 let loc_spacetime_node_hole = Reg.dummy
-let loc_exn_bucket = register 20000 Generic Val
+let loc_exn_bucket = register ((99999 lsl 3) lor 0) Generic Val
 
 
 let loc_arguments arg =
@@ -77,7 +77,9 @@ let loc_external_arguments arg =
 
 let register_name reg = "$" ^ string_of_int reg
 
-let register_class _reg = 0
+let register_class reg = match reg.typ with
+  | Float -> 1
+  | _ -> 0
 
 let word_addressed = false
 
