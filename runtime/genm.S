@@ -15,7 +15,12 @@ cat << 'EOF'
 #*                                                                             *
 #*******************************************************************************
 
-
+################################################################################
+# caml_garbage_collection 
+################################################################################
+  .data
+externs:
+  .quad caml_garbage_collection
 
 ################################################################################
 # caml_collect
@@ -557,21 +562,36 @@ caml_stack_overflow:
   trap
 
 ################################################################################
-  .data
-externs:
-  .quad caml_garbage_collection
+# caml_c_call
+################################################################################
+  .text
+  .globl caml_c_call
+caml_c_call:
+  .call       caml_ext
+  .args       0, i64
+
+  mov.i64     $0, $ret_addr
+  mov.i64     $1, caml_last_return_address
+  st.8        [$1], $0
+
+  mov.i64     $2, $frame_addr
+  mov.i64     $3, caml_bottom_of_stack
+  st.8        [$3], $2
+
+  arg.i64     $4, 0
+  tcall.i64.c $4
+
 EOF
 
-function repeat() {
+repeat() {
   local str=''
-  for (( i=0; i < $1; i++))
-  do
-    str+=$2
+	for i in `seq 1 $1`; do
+    str="$str$2"
   done
   echo $str
 }
 
-for i in `seq 0 1 30`; do
+for i in `seq 1 30`; do
   cat << EOF
 ################################################################################
 # caml_c_call$(repeat $i _i64)
@@ -592,13 +612,11 @@ caml_c_call$(repeat $i _i64):
 
   arg.i64     \$4, 0
 EOF
-  for (( j=1; j <= $i; j++))
-  do
+  for j in `seq 1 $i`; do
     echo "  arg.i64     \$5$j, $j"
   done
   printf "  tcall.i64.c \$4"
-  for (( j=1; j <= $i; j++))
-  do
+  for j in `seq 1 $i`; do
     printf ", \$5$j"
   done
   printf "\n\n"
