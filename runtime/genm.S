@@ -1,16 +1,19 @@
-################################################################################
-#                                                                              #
-#                                  OCaml                                       #
-#                                                                              #
-#                  Nandor Licker, University of Cambridge                      #
-#                                                                              #
-#    Copyright 2018--     Nandor Licker                                        #
-#                                                                              #
-#    All rights reserved.  This file is distributed under the terms of         #
-#    the GNU Lesser General Public License version 2.1, with the               #
-#    special exception on linking described in the file LICENSE.               #
-#                                                                              #
-################################################################################
+#!/bin/sh
+
+cat << 'EOF'
+#*******************************************************************************
+#*                                                                             *
+#*                                 OCaml                                       *
+#*                                                                             *
+#*                 Nandor Licker, University of Cambridge                      *
+#*                                                                             *
+#*   Copyright 2018--     Nandor Licker                                        *
+#*                                                                             *
+#*   All rights reserved.  This file is distributed under the terms of         *
+#*   the GNU Lesser General Public License version 2.1, with the               *
+#*   special exception on linking described in the file LICENSE.               *
+#*                                                                             *
+#*******************************************************************************
 
 
 
@@ -277,228 +280,6 @@ caml_allocN:
   mov.i64       $99, caml_collect
   call.caml_gc  $99
   jmp           .LallocN
-
-################################################################################
-# caml_c_call
-################################################################################
-  .text
-  .globl caml_c_call
-caml_c_call:
-  .call       caml_ext
-  .args       0, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $8, 0
-  tcall.i64.c $8
-
-################################################################################
-# caml_c_call_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64
-caml_c_call_i64:
-  .call       caml_ext
-  .args       0, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $8, 0
-  arg.i64     $9, 1
-  tcall.i64.c $8, $9
-
-################################################################################
-# caml_c_call_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64
-caml_c_call_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  tcall.i64.c $10, $11, $12
-
-################################################################################
-# caml_c_call_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64
-caml_c_call_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  tcall.i64.c $10, $11, $12, $13
-
-################################################################################
-# caml_c_call_i64_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64_i64
-caml_c_call_i64_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  arg.i64     $14, 4
-  tcall.i64.c $10, $11, $12, $13, $14
-
-################################################################################
-# caml_c_call_i64_i64_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64_i64_i64
-caml_c_call_i64_i64_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  arg.i64     $14, 4
-  arg.i64     $15, 5
-  tcall.i64.c $10, $11, $12, $13, $14, $15
-
-################################################################################
-# caml_c_call_i64_i64_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64_i64_i64_i64
-caml_c_call_i64_i64_i64_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  arg.i64     $14, 4
-  arg.i64     $15, 5
-  arg.i64     $16, 6
-  tcall.i64.c $10, $11, $12, $13, $14, $15, $16
-
-################################################################################
-# caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64
-caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  arg.i64     $14, 4
-  arg.i64     $15, 5
-  arg.i64     $16, 6
-  arg.i64     $17, 7
-  arg.i64     $18, 8
-  arg.i64     $19, 9
-  arg.i64     $20, 10
-  tcall.i64.c $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
-
-################################################################################
-# caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64
-################################################################################
-  .text
-  .globl caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64
-caml_c_call_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64_i64:
-  .call       caml_ext
-  .args       0, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64
-
-  mov.i64     $3, $ret_addr
-  mov.i64     $4, caml_last_return_address
-  st.8        [$4], $3
-
-  mov.i64     $7, $frame_addr
-  mov.i64     $6, caml_bottom_of_stack
-  st.8        [$6], $7
-
-  arg.i64     $10, 0
-  arg.i64     $11, 1
-  arg.i64     $12, 2
-  arg.i64     $13, 3
-  arg.i64     $14, 4
-  arg.i64     $15, 5
-  arg.i64     $16, 6
-  arg.i64     $17, 7
-  arg.i64     $18, 8
-  arg.i64     $19, 9
-  arg.i64     $20, 10
-  arg.i64     $21, 11
-  tcall.i64.c $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
 
 ################################################################################
 # caml_ml_array_bound_error
@@ -779,3 +560,46 @@ caml_stack_overflow:
   .data
 externs:
   .quad caml_garbage_collection
+EOF
+
+function repeat() {
+  local str=''
+  for (( i=0; i < $1; i++))
+  do
+    str+=$2
+  done
+  echo $str
+}
+
+for i in `seq 0 1 30`; do
+  cat << EOF
+################################################################################
+# caml_c_call$(repeat $i _i64)
+################################################################################
+  .text
+  .globl caml_c_call$(repeat $i _i64)
+caml_c_call$(repeat $i _i64):
+  .call       caml_ext
+  .args       0, i64$(repeat $i ", i64")
+
+  mov.i64     \$0, \$ret_addr
+  mov.i64     \$1, caml_last_return_address
+  st.8        [\$1], \$0
+
+  mov.i64     \$2, \$frame_addr
+  mov.i64     \$3, caml_bottom_of_stack
+  st.8        [\$3], \$2
+
+  arg.i64     \$4, 0
+EOF
+  for (( j=1; j <= $i; j++))
+  do
+    echo "  arg.i64     \$5$j, $j"
+  done
+  printf "  tcall.i64.c \$4"
+  for (( j=1; j <= $i; j++))
+  do
+    printf ", \$5$j"
+  done
+  printf "\n\n"
+done
