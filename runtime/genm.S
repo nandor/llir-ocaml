@@ -1,6 +1,3 @@
-#!/bin/sh
-
-cat << 'EOF'
 #*******************************************************************************
 #*                                                                             *
 #*                                 OCaml                                       *
@@ -16,7 +13,7 @@ cat << 'EOF'
 #*******************************************************************************
 
 ################################################################################
-# caml_garbage_collection 
+# caml_garbage_collection
 ################################################################################
   .data
 externs:
@@ -287,18 +284,6 @@ caml_allocN:
   jmp           .LallocN
 
 ################################################################################
-# caml_ml_array_bound_error
-################################################################################
-  .text
-  .globl caml_ml_array_bound_error
-caml_ml_array_bound_error:
-  .call              caml_raise
-
-  mov.i64            $1, caml_c_call
-  mov.i64            $2, caml_array_bound_error
-  tcall.i64.caml_ext $1, $2
-
-################################################################################
 # caml_callback_exn
 ################################################################################
   .text
@@ -352,21 +337,20 @@ caml_callback3_exn:
   tcall.i64.c       $4, $5, $1, $2, $3, $0
 
 ################################################################################
-# caml_stack_overflow
+# caml_raise_exn
 ################################################################################
   .text
-  .globl caml_raise_exception
-caml_raise_exception:
-  .call       c
-  .args       0, i64
-
+  .globl caml_raise_exn
+caml_raise_exn:
+  .call             caml_raise
+  .args             0, i64
   # Check if traces are active.
   mov.i64     $0, caml_backtrace_active
   ld.4.i32    $1, [$0]
   mov.i32     $2, 1
   cmp.eq.i32  $3, $1, $2
-  jt          $3, .Lactive
-.Lthrow:
+  jt          $3, .Lactive.caml_raise_exn
+.Lthrow.caml_raise_exn:
   # Raise the exception here.
   arg.i64     $10, 0
   mov.i64     $11, caml_exn_val
@@ -387,7 +371,58 @@ caml_raise_exception:
   set.i64     $rsp, $20
   st.8        [$14], $21
   ji          $19
-.Lactive:
+.Lactive.caml_raise_exn:
+  arg.i64     $10, 0
+
+  mov.i64     $11, $ret_addr
+  mov.i64     $12, $frame_addr
+  mov.i64     $13, caml_exception_pointer
+  ld.8.i64    $14, [$13]
+
+  mov.i64     $17, caml_stash_backtrace
+  call.c      $17, $10, $11, $12, $14
+
+  jmp         .Lthrow.caml_raise_exn
+
+
+
+################################################################################
+# caml_raise_exception
+################################################################################
+  .text
+  .globl caml_raise_exception
+caml_raise_exception:
+  .call       c
+  .args       0, i64
+
+  # Check if traces are active.
+  mov.i64     $0, caml_backtrace_active
+  ld.4.i32    $1, [$0]
+  mov.i32     $2, 1
+  cmp.eq.i32  $3, $1, $2
+  jt          $3, .Lactive.caml_raise_exception
+.Lthrow.caml_raise_exception:
+  # Raise the exception here.
+  arg.i64     $10, 0
+  mov.i64     $11, caml_exn_val
+  st.8        [$11], $10
+
+  # Load the frame.
+  mov.i64     $14, caml_exception_pointer
+  mov.i64     $15, 8
+  ld.8.i64    $16, [$14]
+  add.i64     $17, $16, $15
+  add.i64     $18, $17, $15
+
+  ld.8.i64    $19, [$16]    # Address.
+  ld.8.i64    $20, [$17]    # Stack pointer.
+  ld.8.i64    $21, [$18]    # Next frame.
+
+  # Jump.
+  set.i64     $rsp, $20
+  st.8        [$14], $21
+  ji          $19
+.Lactive.caml_raise_exception:
   arg.i64     $10, 0
 
   mov.i64     $11, caml_last_return_address
@@ -400,7 +435,7 @@ caml_raise_exception:
   mov.i64     $17, caml_stash_backtrace
   call.c      $17, $10, $12, $14, $16
 
-  jmp .Lthrow
+  jmp .Lthrow.caml_raise_exception
 
 ################################################################################
 # caml_exn_val
@@ -560,64 +595,3 @@ caml_start_program_impl:
   .globl caml_stack_overflow
 caml_stack_overflow:
   trap
-
-################################################################################
-# caml_c_call
-################################################################################
-  .text
-  .globl caml_c_call
-caml_c_call:
-  .call       caml_ext
-  .args       0, i64
-
-  mov.i64     $0, $ret_addr
-  mov.i64     $1, caml_last_return_address
-  st.8        [$1], $0
-
-  mov.i64     $2, $frame_addr
-  mov.i64     $3, caml_bottom_of_stack
-  st.8        [$3], $2
-
-  arg.i64     $4, 0
-  tcall.i64.c $4
-
-EOF
-
-repeat() {
-  local str=''
-	for i in `seq 1 $1`; do
-    str="$str$2"
-  done
-  echo $str
-}
-
-for i in `seq 1 30`; do
-  cat << EOF
-################################################################################
-# caml_c_call$(repeat $i _i64)
-################################################################################
-  .text
-  .globl caml_c_call$(repeat $i _i64)
-caml_c_call$(repeat $i _i64):
-  .call       caml_ext
-  .args       0, i64$(repeat $i ", i64")
-
-  mov.i64     \$0, \$ret_addr
-  mov.i64     \$1, caml_last_return_address
-  st.8        [\$1], \$0
-
-  mov.i64     \$2, \$frame_addr
-  mov.i64     \$3, caml_bottom_of_stack
-  st.8        [\$3], \$2
-
-  arg.i64     \$4, 0
-EOF
-  for j in `seq 1 $i`; do
-    echo "  arg.i64     \$5$j, $j"
-  done
-  printf "  tcall.i64.c \$4"
-  for j in `seq 1 $i`; do
-    printf ", \$5$j"
-  done
-  printf "\n\n"
-done

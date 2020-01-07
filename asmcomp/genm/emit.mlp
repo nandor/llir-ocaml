@@ -230,17 +230,7 @@ let emit_linear body =
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       if alloc then begin
-        let wrap = make_temp () in
-        let arg_types = arg
-          |> Array.map (fun arg -> match arg.typ with
-            | Float -> "f64"
-            | _ -> "i64"
-            )
-          |> Array.to_list
-          |> String.concat "_"
-        in
-        `  mov.i64 {emit_temp wrap}, {emit_symbol "caml_c_call_"}{emit_string arg_types}\n`;
-        `  {emit_call !handlers}{emit_string res_types}.caml_ext{emit_regs res " " ","} {emit_temp wrap}, {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_frame{emit_value res}\n`
+        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_frame{emit_value res}\n`
       end else begin
         `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}{emit_value res}\n`
       end
@@ -447,10 +437,10 @@ let emit_linear body =
     | Lraise(raise) ->
       (match raise with
       | _ when no_handler !handlers ->
-        let exn = emit_addr "caml_raise_exception" in
+        let exn = emit_addr "caml_raise_exn" in
         `  tcall.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`;
       | _ ->
-        let exn = emit_addr "caml_raise_exception" in
+        let exn = emit_addr "caml_raise_exn" in
         `  invoke.caml_raise {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers}\n`;
         `  trap\n`;
       )
@@ -506,12 +496,12 @@ let emit_linear body =
   (* Emit bound error call *)
   !bound_error_labels |> List.iter (fun (handler, label) ->
     `{emit_label label}:\n`;
-    let addr = emit_addr "caml_ml_array_bound_error" in
+    let addr = emit_addr "caml_array_bound_error" in
     match handler with
     | None   ->
       `  tcall.caml_raise {emit_temp addr}\n`
     | Some h ->
-      `  invoke.caml_raise {emit_temp addr}, {emit_label h}\n`;
+      `  invoke.caml_raise {emit_temp addr}, {emit_label h} @caml_frame\n`;
       `  trap\n`
     )
 
