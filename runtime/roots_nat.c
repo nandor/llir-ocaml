@@ -237,6 +237,9 @@ void caml_unregister_frametable(intnat *table) {
 intnat caml_globals_inited = 0;
 static intnat caml_globals_scanned = 0;
 static link * caml_dyn_globals = NULL;
+#ifdef TARGET_genm
+struct caml_context *caml_callback_link = NULL;
+#endif
 
 void caml_register_dyn_global(void *v) {
   caml_dyn_globals = cons((void*) v,caml_dyn_globals);
@@ -258,6 +261,9 @@ void caml_oldify_local_roots (void)
   value * root;
   struct caml__roots_block *lr;
   link *lnk;
+#ifdef TARGET_genm
+  struct caml_context *current_context = caml_callback_link;
+#endif
 
   /* The global roots */
   for (i = caml_globals_scanned;
@@ -316,7 +322,12 @@ void caml_oldify_local_roots (void)
       } else {
         /* This marks the top of a stack chunk for an ML callback.
            Skip C portion of stack and continue with next ML stack chunk. */
-        struct caml_context * next_context = Callback_link(sp);
+#ifdef TARGET_genm
+        struct caml_context *next_context = current_context;
+        current_context = current_context->next_context;
+#else
+        struct caml_context *next_context = Callback_link(sp);
+#endif
         sp = next_context->bottom_of_stack;
         retaddr = next_context->last_retaddr;
         regs = next_context->gc_regs;
@@ -462,7 +473,9 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
   unsigned short * p;
   value * root;
   struct caml__roots_block *lr;
-
+#ifdef TARGET_genm
+  struct caml_context *current_context = caml_callback_link;
+#endif
   sp = bottom_of_stack;
   retaddr = last_retaddr;
   regs = gc_regs;
@@ -495,7 +508,12 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
       } else {
         /* This marks the top of a stack chunk for an ML callback.
            Skip C portion of stack and continue with next ML stack chunk. */
-        struct caml_context * next_context = Callback_link(sp);
+#ifdef TARGET_genm
+        struct caml_context *next_context = current_context;
+        current_context = current_context->next_context;
+#else
+        struct caml_context *next_context = Callback_link(sp);
+#endif
         sp = next_context->bottom_of_stack;
         retaddr = next_context->last_retaddr;
         regs = next_context->gc_regs;

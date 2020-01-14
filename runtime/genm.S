@@ -297,7 +297,7 @@ caml_callback_exn:
   ld.8.i64          $2, [$0]
 
   undef.i64         $3
-  mov.i64           $4, caml_start_program_impl
+  mov.i64           $4, caml_start_program_helper
   tcall.i64.c       $4, $2, $1, $0, $3, $3
 
 ################################################################################
@@ -314,7 +314,7 @@ caml_callback2_exn:
   arg.i64           $2, 2
 
   undef.i64         $3
-  mov.i64           $4, caml_start_program_impl
+  mov.i64           $4, caml_start_program_helper
   mov.i64           $5, caml_apply2
   tcall.i64.c       $4, $5, $1, $2, $0, $3
 
@@ -332,7 +332,7 @@ caml_callback3_exn:
   arg.i64           $2, 2
   arg.i64           $3, 3
 
-  mov.i64           $4, caml_start_program_impl
+  mov.i64           $4, caml_start_program_helper
   mov.i64           $5, caml_apply3
   tcall.i64.c       $4, $5, $1, $2, $3, $0
 
@@ -452,25 +452,31 @@ caml_exn_val:
   .globl caml_start_program
 caml_start_program:
   .call             c
-  .stack_object     0, 48, 8
-  .noinline
+  .stack_object     0, 24, 8
+  .stack_object     1, 32, 8
 .Lentry:
   # Save global variables.
-  frame.i64         $40, 0, 40
-  mov.i64           $0, caml_gc_regs
-  ld.8.i64          $1, [$0]
-  st.8              [$40], $1
+  frame.i64         $40, 1, 0
+  mov.i64           $10, caml_bottom_of_stack
+  ld.8.i64          $21, [$10]
+  st.8              [$40], $21
 
-  frame.i64         $41, 0, 32
-  mov.i64           $2, caml_last_return_address
-  ld.8.i64          $3, [$2]
-  st.8              [$41], $3
+  frame.i64         $41, 1, 8
+  mov.i64           $11, caml_last_return_address
+  ld.8.i64          $21, [$11]
+  st.8              [$41], $21
 
-  frame.i64         $42, 0, 24
-  mov.i64           $4, caml_bottom_of_stack
-  ld.8.i64          $5, [$4]
-  st.8              [$42], $5
+  frame.i64         $42, 1, 16
+  mov.i64           $12, caml_gc_regs
+  ld.8.i64          $22, [$12]
+  st.8              [$42], $22
 
+  frame.i64         $43, 1, 24
+  mov.i64           $13, caml_callback_link
+  ld.8.i64          $23, [$13]
+  st.8              [$43], $23
+
+  st.8              [$13], $40
 
   # Create an exception frame.
   frame.i64         $51, 0, 0            # Pointer to handler.
@@ -496,14 +502,17 @@ caml_start_program:
   ld.8.i64          $400, [$53]
   st.8              [$6], $400
 
-  ld.8.i64          $401, [$42]
-  st.8              [$4], $401
+  ld.8.i64          $400, [$40]
+  st.8              [$10], $400
 
-  ld.8.i64          $402, [$41]
-  st.8              [$2], $402
+  ld.8.i64          $400, [$41]
+  st.8              [$11], $400
 
-  ld.8.i64          $403, [$40]
-  st.8              [$0], $403
+  ld.8.i64          $400, [$42]
+  st.8              [$12], $400
+
+  ld.8.i64          $400, [$43]
+  st.8              [$13], $400
 
   ret.i64           $300
 
@@ -516,29 +525,36 @@ caml_start_program:
   jmp               .Lreturn
 
 ################################################################################
-# caml_start_program_impl
+# caml_start_program_helper
 ################################################################################
-caml_start_program_impl:
+caml_start_program_helper:
   .call             c
-  .stack_object     0, 48, 8
+  .stack_object     0, 24, 8
+  .stack_object     1, 32, 8
   .args             0, i64, i64, i64, i64, i64
 .Lentry_impl:
   # Save global variables.
-  frame.i64         $40, 0, 40
-  mov.i64           $0, caml_gc_regs
-  ld.8.i64          $1, [$0]
-  st.8              [$40], $1
+  frame.i64         $40, 1, 0
+  mov.i64           $10, caml_bottom_of_stack
+  ld.8.i64          $21, [$10]
+  st.8              [$40], $21
 
-  frame.i64         $41, 0, 32
-  mov.i64           $2, caml_last_return_address
-  ld.8.i64          $3, [$2]
-  st.8              [$41], $3
+  frame.i64         $41, 1, 8
+  mov.i64           $11, caml_last_return_address
+  ld.8.i64          $21, [$11]
+  st.8              [$41], $21
 
-  frame.i64         $42, 0, 24
-  mov.i64           $4, caml_bottom_of_stack
-  ld.8.i64          $5, [$4]
-  st.8              [$42], $5
+  frame.i64         $42, 1, 16
+  mov.i64           $12, caml_gc_regs
+  ld.8.i64          $22, [$12]
+  st.8              [$42], $22
 
+  frame.i64         $43, 1, 24
+  mov.i64           $13, caml_callback_link
+  ld.8.i64          $23, [$13]
+  st.8              [$43], $23
+
+  st.8              [$13], $40
 
   # Create an exception frame.
   frame.i64         $51, 0, 0            # Pointer to handler.
@@ -568,14 +584,17 @@ caml_start_program_impl:
   ld.8.i64          $400, [$53]
   st.8              [$6], $400
 
-  ld.8.i64          $401, [$42]
-  st.8              [$4], $401
+  ld.8.i64          $400, [$40]
+  st.8              [$10], $400
 
-  ld.8.i64          $402, [$41]
-  st.8              [$2], $402
+  ld.8.i64          $400, [$41]
+  st.8              [$11], $400
 
-  ld.8.i64          $403, [$40]
-  st.8              [$0], $403
+  ld.8.i64          $400, [$42]
+  st.8              [$12], $400
+
+  ld.8.i64          $400, [$43]
+  st.8              [$13], $400
 
   ret.i64           $300
 
