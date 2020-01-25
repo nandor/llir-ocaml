@@ -196,7 +196,7 @@ let emit_linear body =
           label
       in
       let flag = make_temp () in
-      `  cmp.ule.i32 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  cmp.ule.i8 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
@@ -331,20 +331,20 @@ let emit_linear body =
       (match test with
       | Itruetest ->
         let flag = make_temp () in
-        `  trunc.i32.i64 {emit_temp flag}, {emit_reg arg.(0)}\n`;
+        `  trunc.i8 {emit_temp flag}, {emit_reg arg.(0)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifalsetest ->
         let flag = make_temp () in
-        `  trunc.i32.i64 {emit_temp flag}, {emit_reg arg.(0)}\n`;
+        `  trunc.i8 {emit_temp flag}, {emit_reg arg.(0)}\n`;
         `  jf {emit_temp flag}, {emit_label label}\n`
       | Iinttest cc ->
         let flag = make_temp () in
-        `  cmp.{emit_cc cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_cc cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
-        `  cmp.{emit_cc cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+        `  cmp.{emit_cc cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ifloattest(cc) ->
         let cond = match cc with
@@ -360,7 +360,7 @@ let emit_linear body =
           | CFnge -> "ult"
         in
         let flag = make_temp () in
-        `  cmp.{emit_string cond}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+        `  cmp.{emit_string cond}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
         `  jt {emit_temp flag}, {emit_label label}\n`
       | Ioddtest ->
         let imm = emit_const 1 in
@@ -377,7 +377,7 @@ let emit_linear body =
         let imm = emit_const 1 in
         let flag = make_temp () in
         let emit cc lbl =
-          `  cmp.{emit_string cc}.i32 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
+          `  cmp.{emit_string cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
           `  jt {emit_temp flag}, {emit_label lbl}\n`
         in
         lbl_lt |> Option.iter (emit "lt");
