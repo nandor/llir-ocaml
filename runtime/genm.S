@@ -78,7 +78,7 @@ caml_raise_exn:
   mov.i64     $0, caml_backtrace_active
   ld.4.i32    $1, [$0]
   mov.i32     $2, 1
-  cmp.eq.i32  $3, $1, $2
+  cmp.eq.i8   $3, $1, $2
   jt          $3, .Lactive.caml_raise_exn
 .Lthrow.caml_raise_exn:
   # Raise the exception here.
@@ -129,7 +129,7 @@ caml_raise_exception:
   mov.i64     $0, caml_backtrace_active
   ld.4.i32    $1, [$0]
   mov.i32     $2, 1
-  cmp.eq.i32  $3, $1, $2
+  cmp.eq.i8   $3, $1, $2
   jt          $3, .Lactive.caml_raise_exception
 .Lthrow.caml_raise_exception:
   # Raise the exception here.
