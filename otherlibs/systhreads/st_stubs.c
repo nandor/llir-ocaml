@@ -82,7 +82,10 @@ struct caml_thread_struct {
   char * exception_pointer; /* Saved value of Caml_state->exception_pointer */
   struct caml__roots_block * local_roots; /* Saved value of local_roots */
   struct longjmp_buffer * exit_buf; /* For thread exit */
-#if defined(NATIVE_CODE) && defined(WITH_SPACETIME)
+#ifdef TARGET_genm
+  struct caml_context *callback_link;
+#endif
+#ifdef WITH_SPACETIME
   value internal_spacetime_trie_root;
   value internal_spacetime_finaliser_trie_root;
   value* spacetime_trie_node_ptr;
@@ -180,6 +183,9 @@ Caml_inline void caml_thread_save_runtime_state(void)
   curr_thread->last_retaddr = Caml_state->last_return_address;
   curr_thread->gc_regs = Caml_state->gc_regs;
   curr_thread->exception_pointer = Caml_state->exception_pointer;
+#ifdef TARGET_genm
+  curr_thread->callback_link = Caml_state->callback_link;
+#endif
 #ifdef WITH_SPACETIME
   curr_thread->spacetime_trie_node_ptr
     = caml_spacetime_trie_node_ptr;
@@ -209,6 +215,9 @@ Caml_inline void caml_thread_restore_runtime_state(void)
   Caml_state->last_return_address = curr_thread->last_retaddr;
   Caml_state->gc_regs = curr_thread->gc_regs;
   Caml_state->exception_pointer = curr_thread->exception_pointer;
+#ifdef TARGET_genm
+  caml_callback_link = curr_thread->callback_link;
+#endif
 #ifdef WITH_SPACETIME
   caml_spacetime_trie_node_ptr
     = curr_thread->spacetime_trie_node_ptr;
@@ -353,6 +362,9 @@ static caml_thread_t caml_thread_new_info(void)
   th->exception_pointer = NULL;
   th->local_roots = NULL;
   th->exit_buf = NULL;
+#ifdef TARGET_genm
+  th->callback_link = NULL;
+#endif
 #ifdef WITH_SPACETIME
   /* CR-someday mshinwell: The commented-out changes here are for multicore,
      where we think we should have one trie per domain. */
