@@ -22,7 +22,7 @@
 
 #include "socketaddr.h"
 
-CAMLprim value unix_connect(value socket, value address)
+CAMLprim value unix_connect(value socket, value address) NOINLINE
 {
   int retcode;
   union sock_addr_union addr;

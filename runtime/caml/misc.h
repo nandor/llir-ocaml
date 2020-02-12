@@ -74,7 +74,13 @@ CAMLdeprecated_typedef(addr, char *);
   #define Noreturn
 #endif
 
-
+/* We force "noinline" in certain places to be sure we know how many
+   frames there will be on the stack. */
+#ifdef _MSC_VER
+#define NOINLINE __declspec(noinline)
+#else
+#define NOINLINE __attribute__((noinline))
+#endif
 
 /* Export control (to mark primitives and to handle Windows DLL) */
 

@@ -66,7 +66,7 @@ static value alloc_process_status(int pid, int status)
   return res;
 }
 
-CAMLprim value unix_wait(value unit)
+CAMLprim value unix_wait(value unit) NOINLINE
 {
   int pid, status;
 
@@ -87,7 +87,7 @@ static int wait_flag_table[] = {
   WNOHANG, WUNTRACED
 };
 
-CAMLprim value unix_waitpid(value flags, value pid_req)
+CAMLprim value unix_waitpid(value flags, value pid_req) NOINLINE
 {
   int pid, status, cv_flags;
 

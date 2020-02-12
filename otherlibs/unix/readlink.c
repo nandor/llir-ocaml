@@ -32,7 +32,7 @@
 #endif
 #endif
 
-CAMLprim value unix_readlink(value path)
+CAMLprim value unix_readlink(value path) NOINLINE
 {
   CAMLparam1(path);
   char buffer[PATH_MAX];

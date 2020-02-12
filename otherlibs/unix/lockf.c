@@ -22,7 +22,7 @@
 
 #if defined(F_GETLK) && defined(F_SETLK) && defined(F_SETLKW)
 
-CAMLprim value unix_lockf(value fd, value cmd, value span)
+CAMLprim value unix_lockf(value fd, value cmd, value span) NOINLINE
 {
   struct flock l;
   int ret;

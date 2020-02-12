@@ -27,7 +27,7 @@
 #endif
 #endif
 
-CAMLprim value unix_sleep(value duration)
+CAMLprim value unix_sleep(value duration) NOINLINE
 {
   double d = Double_val(duration);
   if (d < 0.0) return Val_unit;

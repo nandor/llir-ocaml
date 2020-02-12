@@ -17,7 +17,7 @@
 #include <caml/signals.h>
 #include "unixsupport.h"
 
-CAMLprim value unix_close(value fd)
+CAMLprim value unix_close(value fd) NOINLINE
 {
   int ret;
   caml_enter_blocking_section();

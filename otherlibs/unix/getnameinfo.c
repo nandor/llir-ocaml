@@ -33,7 +33,7 @@ static int getnameinfo_flag_table[] = {
   NI_NOFQDN, NI_NUMERICHOST, NI_NAMEREQD, NI_NUMERICSERV, NI_DGRAM
 };
 
-CAMLprim value unix_getnameinfo(value vaddr, value vopts)
+CAMLprim value unix_getnameinfo(value vaddr, value vopts) NOINLINE
 {
   CAMLparam0();
   CAMLlocal3(vhost, vserv, vres);

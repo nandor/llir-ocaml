@@ -28,7 +28,7 @@ typedef struct dirent directory_entry;
 typedef struct direct directory_entry;
 #endif
 
-CAMLprim value unix_readdir(value vd)
+CAMLprim value unix_readdir(value vd) NOINLINE
 {
   DIR * d;
   directory_entry * e;

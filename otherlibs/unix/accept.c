@@ -25,7 +25,7 @@
 
 #include "socketaddr.h"
 
-CAMLprim value unix_accept(value cloexec, value sock)
+CAMLprim value unix_accept(value cloexec, value sock) NOINLINE
 {
   int retcode;
   value res;

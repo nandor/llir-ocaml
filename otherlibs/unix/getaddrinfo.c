@@ -55,7 +55,7 @@ static value convert_addrinfo(struct addrinfo * a)
   CAMLreturn(vres);
 }
 
-CAMLprim value unix_getaddrinfo(value vnode, value vserv, value vopts)
+CAMLprim value unix_getaddrinfo(value vnode, value vserv, value vopts) NOINLINE
 {
   CAMLparam3(vnode, vserv, vopts);
   CAMLlocal3(vres, v, e);

@@ -19,7 +19,7 @@
 #include <caml/signals.h>
 #include "unixsupport.h"
 
-CAMLprim value unix_read(value fd, value buf, value ofs, value len)
+CAMLprim value unix_read(value fd, value buf, value ofs, value len) NOINLINE
 {
   long numbytes;
   int ret;

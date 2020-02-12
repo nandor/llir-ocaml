@@ -51,14 +51,6 @@
 
 #ifdef WITH_SPACETIME
 
-/* We force "noinline" in certain places to be sure we know how many
-   frames there will be on the stack. */
-#ifdef _MSC_VER
-#define NOINLINE __declspec(noinline)
-#else
-#define NOINLINE __attribute__((noinline))
-#endif
-
 #ifdef HAS_LIBUNWIND
 #define UNW_LOCAL_ONLY
 #include "libunwind.h"
