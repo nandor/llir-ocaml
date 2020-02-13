@@ -19,18 +19,16 @@ open Reg
 
 type reg = Arg | Param | Result | Generic
 
-let num_regs = 3000
-
 let num_register_classes = 2
-let num_available_registers = [| num_regs; num_regs |]
-let first_available_register = [| 0; num_regs |]
+let num_available_registers = [| 0; 0 |]
+let first_available_register = [| 0; 0 |]
 let rotate_registers = false
 
 let register i t typ =
   let key = match t with
-    | Arg     -> 10000 + ((i lsl 3) lor 0)
-    | Param   -> 10000 + ((i lsl 3) lor 1)
-    | Result  -> 10000 + ((i lsl 3) lor 2)
+    | Arg     -> 15_000 + ((i lsl 3) lor 0)
+    | Param   -> 15_000 + ((i lsl 3) lor 1)
+    | Result  -> 15_000 + ((i lsl 3) lor 2)
     | Generic -> i
   in
   Reg.at_location typ (Reg key)

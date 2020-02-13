@@ -30,12 +30,12 @@ let emit_linear body =
   let bound_error_labels = ref [] in
 
   (* Find the next available virtual register *)
-  let next_reg = ref 15000 in
+  let next_reg = ref 20000 in
   let params = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r; typ } ->
-        let n =  10000 in
+        let n =  15000 in
         if r >= n then begin
           match r land 7 with
           | 0 -> (* argument *) ()
@@ -44,8 +44,10 @@ let emit_linear body =
           | _ -> assert false
         end else
           next_reg := max (r + 1) !next_reg;
-      | { loc = Unknown } -> assert false
-      | { loc = Stack _ } -> assert false
+      | { loc = Unknown } ->
+        ()
+      | { loc = Stack _ } ->
+        ()
     in
     i.arg |> Array.iter max_reg;
     i.res |> Array.iter max_reg;
@@ -86,9 +88,9 @@ let emit_linear body =
 
   let emit_reg = function
     | {loc = Reg r} ->
-      emit_string ("$" ^ (string_of_int r))
-    | _ ->
-      assert false
+      emit_string ("$" ^ string_of_int r)
+    | { stamp } ->
+      emit_string ("$" ^ string_of_int stamp)
   in
 
   let emit_type = function

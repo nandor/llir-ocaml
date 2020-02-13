@@ -143,7 +143,7 @@ let linear i n contains_calls =
         else
           copy_instr (Lop op) i (linear i.Mach.next n)
     | Iop(Imove | Ireload | Ispill)
-      when i.Mach.arg.(0).loc = i.Mach.res.(0).loc ->
+      when i.Mach.arg.(0).loc = i.Mach.res.(0).loc && not Config.llir ->
         linear i.Mach.next n
     | Iop op ->
         copy_instr (Lop op) i (linear i.Mach.next n)
