@@ -30,20 +30,19 @@ let emit_linear body =
   let bound_error_labels = ref [] in
 
   (* Find the next available virtual register *)
-  let next_reg = ref 20000 in
   let params = Hashtbl.create 10 in
   let rec find_regs i =
     let max_reg = function
       | { loc = Reg r; typ } ->
-        let n =  15000 in
-        if r >= n then begin
-          match r land 7 with
-          | 0 -> (* argument *) ()
-          | 1 -> (* param *)    Hashtbl.replace params r (((r - n) lsr 3), typ)
-          | 2 -> (* result *)   ()
-          | _ -> assert false
-        end else
-          next_reg := max (r + 1) !next_reg;
+        (match r land 7 with
+        | 0 -> (* argument *)   ()
+        | 1 -> (* param *)      Hashtbl.replace params r ((r lsr 3), typ)
+        | 2 -> (* result *)     ()
+        | 3 -> (* generic *)    ()
+        | 4 -> (* allocated *)  ()
+        | 5 -> (* temporary *)  ()
+        | _ -> assert false
+        )
       | { loc = Unknown } ->
         ()
       | { loc = Stack _ } ->
@@ -54,7 +53,12 @@ let emit_linear body =
     if i.desc <> Lend then find_regs i.next
   in
 
-  let make_temp () = let n = !next_reg in next_reg := n + 1; n in
+  let next_reg = ref 0 in
+  let make_temp () =
+    let n = !next_reg in
+    next_reg := n + 1;
+    ((n lsl 3) lor 5)
+  in
   let emit_temp n = emit_string ("$" ^ (string_of_int n)) in
 
   let emit_const n =
@@ -90,7 +94,7 @@ let emit_linear body =
     | {loc = Reg r} ->
       emit_string ("$" ^ string_of_int r)
     | { stamp } ->
-      emit_string ("$" ^ string_of_int stamp)
+      emit_string ("$" ^ string_of_int ((stamp lsl 3) lor 4))
   in
 
   let emit_type = function
