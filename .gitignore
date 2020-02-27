@@ -16,7 +16,7 @@
 # general patterns
 
 *.o
-*.genm
+*.llir
 *.a
 *.so
 *.obj

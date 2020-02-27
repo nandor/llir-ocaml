@@ -163,8 +163,8 @@ static void init_frame_descriptors(link *new_frametables)
 }
 
 void caml_init_frame_descriptors(void) {
-#ifdef TARGET_genm
-  link *new_frametables = cons(caml_genm_frametable, NULL);
+#ifdef TARGET_llir
+  link *new_frametables = cons(caml_llir_frametable, NULL);
 #else
   intnat i;
   link *new_frametables = NULL;
@@ -237,7 +237,7 @@ void caml_unregister_frametable(intnat *table) {
 intnat caml_globals_inited = 0;
 static intnat caml_globals_scanned = 0;
 static link * caml_dyn_globals = NULL;
-#ifdef TARGET_genm
+#ifdef TARGET_llir
 struct caml_context *caml_callback_link = NULL;
 #endif
 
@@ -261,7 +261,7 @@ void caml_oldify_local_roots (void)
   value * root;
   struct caml__roots_block *lr;
   link *lnk;
-#ifdef TARGET_genm
+#ifdef TARGET_llir
   struct caml_context *current_context = caml_callback_link;
 #endif
 
@@ -322,7 +322,7 @@ void caml_oldify_local_roots (void)
       } else {
         /* This marks the top of a stack chunk for an ML callback.
            Skip C portion of stack and continue with next ML stack chunk. */
-#ifdef TARGET_genm
+#ifdef TARGET_llir
         struct caml_context *next_context = current_context;
         current_context = current_context->next_context;
 #else
@@ -473,7 +473,7 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
   unsigned short * p;
   value * root;
   struct caml__roots_block *lr;
-#ifdef TARGET_genm
+#ifdef TARGET_llir
   struct caml_context *current_context = caml_callback_link;
 #endif
   sp = bottom_of_stack;
@@ -508,7 +508,7 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
       } else {
         /* This marks the top of a stack chunk for an ML callback.
            Skip C portion of stack and continue with next ML stack chunk. */
-#ifdef TARGET_genm
+#ifdef TARGET_llir
         struct caml_context *next_context = current_context;
         current_context = current_context->next_context;
 #else

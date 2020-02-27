@@ -35,7 +35,7 @@ frame_descr * caml_next_frame_descriptor(uintnat * pc, char ** sp)
 {
   frame_descr * d;
   uintnat h;
-#ifdef TARGET_genm
+#ifdef TARGET_llir
   struct caml_context *current_context = caml_callback_link;
 #endif
 
@@ -59,7 +59,7 @@ frame_descr * caml_next_frame_descriptor(uintnat * pc, char ** sp)
     } else {
       /* Special frame marking the top of a stack chunk for an ML callback.
          Skip C portion of stack and continue with next ML stack chunk. */
-#ifdef TARGET_genm
+#ifdef TARGET_llir
         struct caml_context *next_context = current_context;
         current_context = current_context->next_context;
 #else

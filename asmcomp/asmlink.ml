@@ -257,6 +257,7 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
   Array.iteri
     (fun i name -> compile_phrase (Cmm_helpers.predef_exception i name))
     Runtimedef.builtin_exceptions;
+<<<<<<< HEAD
   compile_phrase (Cmm_helpers.global_table name_list);
   let globals_map = make_globals_map units_list ~crc_interfaces in
   compile_phrase (Cmm_helpers.globals_map globals_map);
@@ -267,6 +268,17 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
         (Cmm_helpers.code_segment_table("_hot" :: "_startup" :: name_list))
     else
       compile_phrase(Cmm_helpers.code_segment_table("_startup" :: name_list));
+=======
+  compile_phrase (Cmmgen.global_table name_list);
+  let globals_map =
+    if no_global_map then []
+    else make_globals_map units_list ~crc_interfaces
+  in
+  compile_phrase(Cmmgen.globals_map globals_map);
+  if not Config.llir then begin
+    compile_phrase(Cmmgen.data_segment_table ("_startup" :: name_list));
+    compile_phrase(Cmmgen.code_segment_table ("_startup" :: name_list));
+>>>>>>> 95858f3b4... [llir-ocaml] s/GenM/LLIR/g
     let all_names = "_startup" :: "_system" :: name_list in
     compile_phrase (Cmmgen.frame_table all_names);
   end;

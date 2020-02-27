@@ -75,7 +75,7 @@
 #define Callback_link(sp) ((struct caml_context *)((sp) + 16))
 #endif
 
-#ifdef TARGET_genm
+#ifdef TARGET_llir
 #define Saved_return_address(sp) *((intnat *)((sp) - 8))
 #endif
 
@@ -85,7 +85,9 @@ struct caml_context {
   char * bottom_of_stack;            /* beginning of OCaml stack chunk */
   uintnat last_retaddr;              /* last return address in OCaml code */
   value * gc_regs;                   /* pointer to register block */
+#ifdef TARGET_llir
   struct caml_context *next_context; /* link to the next OCaml context */
+#endif
 #ifdef WITH_SPACETIME
   void* trie_node;
 #endif
@@ -139,9 +141,9 @@ extern uintnat (*caml_stack_usage_hook)(void);
 extern value * caml_globals[];
 extern char caml_globals_map[];
 extern intnat caml_globals_inited;
-#ifdef TARGET_genm
+#ifdef TARGET_llir
 extern struct caml_context *caml_callback_link;
-extern intnat * caml_genm_frametable;
+extern intnat * caml_llir_frametable;
 #else
 extern intnat * caml_frametable[];
 #endif

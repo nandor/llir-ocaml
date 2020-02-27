@@ -394,7 +394,7 @@
 
 /****************** GenM:amd64, MacOSX */
 
-#elif defined(TARGET_genm) && defined (SYS_macosx)
+#elif defined(TARGET_llir) && defined (SYS_macosx)
 
   #define DECLARE_SIGNAL_HANDLER(name) \
     static void name(int sig, siginfo_t * info, void * context)

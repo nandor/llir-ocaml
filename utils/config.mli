@@ -186,7 +186,7 @@ val host : string
 val target : string
 (** Whether the compiler is a cross-compiler *)
 
-val genm : bool
+val llir : bool
         (* Whether the target is the GenM IR *)
 
 val flambda : bool
