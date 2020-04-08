@@ -444,7 +444,8 @@ let emit_linear body =
       (match raise with
       | _ when no_handler !handlers ->
         let exn = emit_addr "caml_raise_exn" in
-        `  tcall.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`;
+        `  call.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`;
+        `  trap\n`;
       | _ ->
         let exn = emit_addr "caml_raise_exn" in
         `  invoke.caml_raise {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers}\n`;
@@ -505,7 +506,8 @@ let emit_linear body =
     let addr = emit_addr "caml_array_bound_error" in
     match handler with
     | None   ->
-      `  tcall.caml_raise {emit_temp addr}\n`
+      `  call.caml_raise {emit_temp addr}\n`;
+      `  trap\n`
     | Some h ->
       `  invoke.caml_raise {emit_temp addr}, {emit_label h} @caml_frame\n`;
       `  trap\n`
