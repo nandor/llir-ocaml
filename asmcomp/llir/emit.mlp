@@ -181,8 +181,8 @@ let emit_linear body =
       `  mov.i8 {emit_temp regc}, 64\n`;
       `  srl.i128 {emit_temp regr}, {emit_temp regr}, {emit_temp regc}\n`;
       `  trunc.i64 {emit_reg res.(0)}, {emit_temp regr}\n`
-    | Idiv    -> emit "div"
-    | Imod    -> emit "rem"
+    | Idiv    -> emit "sdiv"
+    | Imod    -> emit "srem"
     | Iand    -> emit "and"
     | Ior     -> emit "or"
     | Ixor    -> emit "xor"
@@ -243,46 +243,70 @@ let emit_linear body =
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
-      let instr = match size with
-        | Byte_unsigned      -> "1.u64"
-        | Byte_signed        -> "1.i64"
-        | Sixteen_unsigned   -> "2.u64"
-        | Sixteen_signed     -> "2.i64"
-        | Thirtytwo_unsigned -> "4.u64"
-        | Thirtytwo_signed   -> "4.i64"
-        | Word_int           -> "8.u64"
-        | Word_val           -> "8.u64"
-        | Single             -> "4.f64"
-        | Double             -> "8.f64"
-        | Double_u           -> "8.f64"
+      let extension ty kind =
+        let ext = make_temp () in
+        ( ty
+        , (fun () ->
+          emit_temp ext)
+        , (fun () ->
+          ` {emit_string kind}.i64 {emit_reg res.(0)}, {emit_temp ext}\n`)
+        )
+      in
+      let load_ty, temp, extend = match size with
+        | Byte_unsigned       -> extension "i8"  "zext"
+        | Byte_signed         -> extension "i8"  "sext"
+        | Sixteen_unsigned    -> extension "i16" "zext"
+        | Sixteen_signed      -> extension "i16" "sext"
+        | Thirtytwo_unsigned  -> extension "i32" "zext"
+        | Thirtytwo_signed    -> extension "i32" "sext"
+        | Word_int
+        | Word_val ->
+          ( "i64", (fun () -> emit_reg res.(0)), (fun () -> ()))
+        | Single ->
+          ( "f32", (fun () -> emit_reg res.(0)), (fun () -> ()))
+        | Double
+        | Double_u ->
+          ( "f64", (fun () -> emit_reg res.(0)), (fun () -> ()))
       in
       (match addr with
       | Iindexed(0) ->
-        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_reg arg.(0)}]{emit_value res}\n`
+        `  ld.{emit_string load_ty} {temp ()}, [{emit_reg arg.(0)}]{emit_value res}\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  ld.{emit_string instr} {emit_reg res.(0)}, [{emit_temp addr}]{emit_value res}\n`
-      )
+        `  ld.{emit_string load_ty} {temp ()}, [{emit_temp addr}]{emit_value res}\n`
+      );
+      extend ()
     | Istore(size, addr, _) ->
-      let instr = match size with
-        | Byte_unsigned      | Byte_signed        -> "1"
-        | Sixteen_unsigned   | Sixteen_signed     -> "2"
-        | Thirtytwo_unsigned | Thirtytwo_signed   -> "4"
-        | Word_int           | Word_val           -> "8"
-        | Single   -> "4"
-        | Double   -> "8"
-        | Double_u -> "8"
+      let truncate ty =
+        let temp = make_temp () in
+        `  trunc.{emit_string ty} {emit_temp temp}, {emit_reg arg.(0)}\n`;
+        (fun () -> emit_temp temp)
+      in
+      let ext =
+        match size with
+        | Byte_unsigned       -> truncate "i8"
+        | Byte_signed         -> truncate "i8"
+        | Sixteen_unsigned    -> truncate "i16"
+        | Sixteen_signed      -> truncate "i16"
+        | Thirtytwo_unsigned  -> truncate "i32"
+        | Thirtytwo_signed    -> truncate "i32"
+        | Word_int
+        | Word_val
+        | Single
+        | Double
+        | Double_u ->
+          (fun () -> emit_reg arg.(0))
       in
       (match addr with
       | Iindexed(0) ->
-        `  st.{emit_string instr} [{emit_reg arg.(1)}], {emit_reg arg.(0)}\n`
+        `  st [{emit_reg arg.(1)}], {ext ()}\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(1)}, {emit_temp imm}\n`;
-        `  st.{emit_string instr} [{emit_temp addr}], {emit_reg arg.(0)}\n`
+        `  st [{emit_temp addr}], {ext ()}\n`
       );
     | Ialloc { words } ->
       let args = match words with
@@ -308,7 +332,7 @@ let emit_linear body =
     | Imulf ->
       `  mul.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Idivf ->
-      `  div.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+      `  sdiv.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Ifloatofint ->
       `  sext.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iintoffloat ->
@@ -426,7 +450,7 @@ let emit_linear body =
       `  frame.i64 {emit_temp jmp_frame}, {emit_int obj}, 0\n`;
       `  frame.i64 {emit_temp sp_frame}, {emit_int obj}, 8\n`;
       `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
-      `  ld.8.u64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
+      `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
       `  st.8 [{emit_temp exc_frame}], {emit_temp exc_val}\n`;
       `  mov.i64 {emit_temp sp_val}, $rsp\n`;
       `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
