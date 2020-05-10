@@ -87,7 +87,7 @@ let contains_calls = ref false
 let assemble_file infile outfile =
   let infile = Filename.quote infile in
   let outfile = Filename.quote outfile in
-  Ccomp.command (Format.sprintf "cp %s %s\n" infile outfile)
+  Ccomp.command (Format.sprintf "llir-as %s -o %s\n" infile outfile)
 
 let init () =
     ()
