@@ -541,7 +541,7 @@ let data = function
   | [] ->
     ()
   | items ->
-    `  .data caml\n`;
+    `  .section .data.caml\n`;
     `  .p2align 3\n`;
     items |> List.iter (function
     | Cstring s          -> emit_string_directive "  .ascii  " s
