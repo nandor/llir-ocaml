@@ -163,20 +163,12 @@ let end_gen_implementation ?toplevel ~ppf_dump
      This is important if a module that uses such a symbol is later
      dynlinked. *)
   if not Config.llir then begin
-<<<<<<< HEAD
     compile_phrase ~ppf_dump
       (Cmm_helpers.reference_symbols
          (List.filter_map (fun prim ->
              if not (Primitive.native_name_is_external prim) then None
              else Some (Primitive.native_name prim))
             !Translmod.primitive_declarations));
-=======
-    compile_phrase ppf
-      (Cmmgen.reference_symbols
-         (List.filter (fun s -> s <> "" && s.[0] <> '%')
-            (List.map Primitive.native_name !Translmod.primitive_declarations))
-      );
->>>>>>> 95858f3b4... [llir-ocaml] s/GenM/LLIR/g
   end;
   emit_end_assembly ()
 

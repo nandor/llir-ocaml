@@ -139,7 +139,7 @@ let ext_dll = "%%EXT_DLL%%"
 
 let host = "%%HOST%%"
 let target = "%%TARGET%%"
-let llir = "%%TARGET%%" = "llir"
+let llir = %%LLIR%%
 
 let default_executable_name =
   match Sys.os_type with
