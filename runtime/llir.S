@@ -20,7 +20,7 @@
   .globl caml_callback_exn
 caml_callback_exn:
   .call             c
-  .args             0, i64, i64
+  .args             i64, i64
 
   arg.i64           $0, 0
   arg.i64           $1, 1
@@ -37,7 +37,7 @@ caml_callback_exn:
   .globl caml_callback2_exn
 caml_callback2_exn:
   .call             c
-  .args             0, i64, i64, i64
+  .args             i64, i64, i64
 
   arg.i64           $0, 0
   arg.i64           $1, 1
@@ -55,7 +55,7 @@ caml_callback2_exn:
   .globl caml_callback3_exn
 caml_callback3_exn:
   .call             c
-  .args             0, i64, i64, i64, i64
+  .args             i64, i64, i64, i64
 
   arg.i64           $0, 0
   arg.i64           $1, 1
@@ -73,7 +73,7 @@ caml_callback3_exn:
   .globl caml_raise_exn
 caml_raise_exn:
   .call             caml_raise
-  .args             0, i64
+  .args             i64
   # Check if traces are active.
   mov.i64     $0, caml_backtrace_active
   ld.4.i32    $1, [$0]
@@ -123,7 +123,7 @@ caml_raise_exn:
   .globl caml_raise_exception
 caml_raise_exception:
   .call       c
-  .args       0, i64
+  .args       i64
 
   # Check if traces are active.
   mov.i64     $0, caml_backtrace_active
@@ -261,7 +261,7 @@ caml_start_program_helper:
   .call             c
   .stack_object     0, 24, 8
   .stack_object     1, 32, 8
-  .args             0, i64, i64, i64, i64, i64
+  .args             i64, i64, i64, i64, i64
 .Lentry_impl:
   # Save global variables.
   frame.i64         $40, 1, 0

@@ -512,8 +512,11 @@ let emit_linear body =
   let arg_list = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) (
       Hashtbl.fold (fun arg (idx, ty) acc -> (idx, arg, ty) :: acc) params []
   ) in
-  `  .args 0`;
-  arg_list |> List.iter (fun (_, _, ty) -> `, {emit_type ty}`);
+  `  .args `;
+  arg_list |> List.iter (fun (i, _, ty) ->
+    if i <> 0 then `, `;
+    `{emit_type ty}`
+  );
   `\n`;
   arg_list |> List.iter
     (fun (idx, arg, ty) -> match ty with
