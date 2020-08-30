@@ -22,7 +22,7 @@
 
 #ifdef HAS_FCHMOD
 
-CAMLprim value unix_fchmod(value fd, value perm) NOINLINE
+CAMLprim value NOINLINE unix_fchmod(value fd, value perm)
 {
   int result;
   caml_enter_blocking_section();

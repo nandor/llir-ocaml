@@ -21,7 +21,7 @@
 
 #ifdef HAS_SYMLINK
 
-CAMLprim value unix_symlink(value to_dir, value path1, value path2) NOINLINE
+CAMLprim value NOINLINE unix_symlink(value to_dir, value path1, value path2)
 {
   CAMLparam3(to_dir, path1, path2);
   char * p1;

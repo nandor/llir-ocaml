@@ -23,7 +23,7 @@
 
 #ifdef HAS_MKFIFO
 
-CAMLprim value unix_mkfifo(value path, value mode) NOINLINE
+CAMLprim value NOINLINE unix_mkfifo(value path, value mode)
 {
   CAMLparam2(path, mode);
   char * p;
@@ -46,7 +46,7 @@ CAMLprim value unix_mkfifo(value path, value mode) NOINLINE
 
 #ifdef S_IFIFO
 
-CAMLprim value unix_mkfifo(value path, value mode) NOINLINE
+CAMLprim value NOINLINE unix_mkfifo(value path, value mode)
 {
   CAMLparam2(path, mode);
   char * p;

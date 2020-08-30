@@ -28,7 +28,7 @@
 
 #ifdef HAS_TRUNCATE
 
-CAMLprim value unix_truncate(value path, value len) NOINLINE
+CAMLprim value NOINLINE unix_truncate(value path, value len)
 {
   CAMLparam2(path, len);
   char * p;
@@ -44,7 +44,7 @@ CAMLprim value unix_truncate(value path, value len) NOINLINE
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value unix_truncate_64(value path, value vlen) NOINLINE
+CAMLprim value NOINLINE unix_truncate_64(value path, value vlen)
 {
   CAMLparam2(path, vlen);
   char * p;

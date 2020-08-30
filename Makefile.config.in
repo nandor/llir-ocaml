@@ -236,6 +236,7 @@ LIBUNWIND_LINK_FLAGS=@libunwind_link_flags@
 WITH_FPIC=@fpic@
 TARGET=@target@
 HOST=@host@
+LLIR=@llir@
 FLAMBDA=@flambda@
 WITH_FLAMBDA_INVARIANTS=@flambda_invariants@
 FORCE_SAFE_STRING=@force_safe_string@

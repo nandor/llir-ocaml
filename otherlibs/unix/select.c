@@ -64,8 +64,8 @@ static value fdset_to_fdlist(value fdlist, fd_set *fdset)
   return res;
 }
 
-CAMLprim value unix_select(value readfds, value writefds, value exceptfds,
-                           value timeout) NOINLINE
+CAMLprim value NOINLINE unix_select(value readfds, value writefds,
+                                    value exceptfds, value timeout)
 {
   fd_set read, write, except;
   int maxfd;

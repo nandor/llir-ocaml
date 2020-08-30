@@ -466,7 +466,8 @@ CAMLexport int caml_rev_convert_signal_number(int signo)
 
 /* Installation of a signal handler (as per [Sys.signal]) */
 
-CAMLprim value caml_install_signal_handler(value signal_number, value action) NOINLINE
+CAMLprim value NOINLINE caml_install_signal_handler(value signal_number,
+                                                    value action)
 {
   CAMLparam2 (signal_number, action);
   CAMLlocal1 (res);

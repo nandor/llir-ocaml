@@ -25,7 +25,7 @@
 #include <sys/dir.h>
 #endif
 
-CAMLprim value unix_closedir(value vd) NOINLINE
+CAMLprim value NOINLINE unix_closedir(value vd)
 {
   CAMLparam1(vd);
   DIR * d = DIR_Val(vd);

@@ -48,7 +48,7 @@ static int access_permission_table[] = {
   F_OK
 };
 
-CAMLprim value unix_access(value path, value perms) NOINLINE
+CAMLprim value NOINLINE unix_access(value path, value perms)
 {
   CAMLparam2(path, perms);
   char_os * p;

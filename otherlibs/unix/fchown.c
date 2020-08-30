@@ -20,7 +20,7 @@
 
 #ifdef HAS_FCHMOD
 
-CAMLprim value unix_fchown(value fd, value uid, value gid) NOINLINE
+CAMLprim value NOINLINE unix_fchown(value fd, value uid, value gid)
 {
   int result;
   caml_enter_blocking_section();

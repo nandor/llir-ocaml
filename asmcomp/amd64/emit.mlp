@@ -938,6 +938,7 @@ let all_functions = ref []
 
 let fundecl fundecl =
   function_name := fundecl.fun_name;
+  fastcode_flag := fundecl.fun_fast;
   tailrec_entry_point := fundecl.fun_tailrec_entry_point_label;
   stack_offset := 0;
   call_gc_sites := [];

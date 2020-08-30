@@ -84,7 +84,7 @@ static value alloc_host_entry(struct hostent *entry)
   return res;
 }
 
-CAMLprim value unix_gethostbyaddr(value a) NOINLINE
+CAMLprim value NOINLINE unix_gethostbyaddr(value a)
 {
   struct in_addr adr = GET_INET_ADDR(a);
   struct hostent * hp;
@@ -118,7 +118,7 @@ CAMLprim value unix_gethostbyaddr(value a) NOINLINE
   return alloc_host_entry(hp);
 }
 
-CAMLprim value unix_gethostbyname(value name) NOINLINE
+CAMLprim value NOINLINE unix_gethostbyname(value name)
 {
   struct hostent * hp;
   char * hostname;

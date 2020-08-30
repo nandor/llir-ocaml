@@ -167,6 +167,7 @@ AC_SUBST([flexdll_chain])
 AC_SUBST([flexlink_flags])
 AC_SUBST([PACKLD])
 AC_SUBST([stdlib_manpages])
+AC_SUBST([llir])
 
 ## Generated files
 
@@ -343,6 +344,10 @@ AC_ARG_ENABLE([stdlib-manpages],
 
 AC_ARG_VAR([WINDOWS_UNICODE_MODE],
   [how to handle Unicode under Windows: ansi, compatible])
+
+AC_ARG_ENABLE([with-llir],
+  [AS_HELP_STRING([--enable-llir],
+    [enable the llir post-link optimiser])])
 
 # There are two configure-time string safety options,
 # --(enable|disable)-force-safe-string and
@@ -1933,5 +1938,9 @@ AS_CASE([$host],
 
 AS_IF([test x"$enable_stdlib_manpages" != "xno"],
   [stdlib_manpages=true],[stdlib_manpages=false])
+
+AS_IF([test x"$with_llir" = "xyes"],
+  [llir=true],
+  [llir=false])
 
 AC_OUTPUT

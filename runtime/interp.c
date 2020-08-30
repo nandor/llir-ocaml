@@ -67,7 +67,6 @@ sp is a local copy of the global variable Caml_state->extern_sp. */
 
 /* GC interface */
 
-<<<<<<< HEAD:runtime/interp.c
 #undef Alloc_small_origin
 // Do call asynchronous callbacks from allocation functions
 #define Alloc_small_origin CAML_FROM_CAML
@@ -80,27 +79,6 @@ sp is a local copy of the global variable Caml_state->extern_sp. */
 /* We store [pc+1] in the stack so that, in case of an exception, the
    first backtrace slot points to the event following the C call
    instruction. */
-=======
-#define Alloc_small_byterun(result, wosize, tag) do {\
-  CAMLassert ((wosize) >= 1); \
-  CAMLassert ((tag_t) (tag) < 256); \
-  CAMLassert ((wosize) <= Max_young_wosize); \
-  caml_young_ptr -= Whsize_wosize (wosize); \
-  if (caml_young_ptr < caml_young_trigger){ \
-    caml_young_ptr += Whsize_wosize (wosize); \
-    CAML_INSTR_INT ("force_minor/alloc_small@", 1); \
-    { sp -= 2; sp[0] = accu; sp[1] = env; caml_extern_sp = sp; }; \
-    caml_gc_dispatch (); \
-    { accu = sp[0]; env = sp[1]; sp += 2; }; \
-    caml_young_ptr -= Whsize_wosize (wosize); \
-  } \
-  Hd_hp (caml_young_ptr) = \
-    Make_header_with_profinfo ((wosize), (tag), Caml_black, 0); \
-  (result) = Val_hp (caml_young_ptr); \
-  DEBUG_clear ((result), (wosize)); \
-} while(0);
-
->>>>>>> 1b3372370... [genm] Fixed allocations in interpreter.:byterun/interp.c
 #define Setup_for_c_call \
   { sp -= 2; sp[0] = env; sp[1] = (value)(pc + 1); Caml_state->extern_sp = sp; }
 #define Restore_after_c_call \
@@ -557,7 +535,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
       } else {
         mlsize_t num_args, i;
         num_args = 1 + extra_args; /* arg1 + extra args */
-        Alloc_small_byterun(accu, num_args + 2, Closure_tag);
+        Alloc_small(accu, num_args + 2, Closure_tag);
         Field(accu, 1) = env;
         for (i = 0; i < num_args; i++) Field(accu, i + 2) = sp[i];
         CAMLassert(!Is_in_value_area(pc-3));
@@ -577,11 +555,12 @@ value caml_interprete(code_t prog, asize_t prog_size)
       if (nvars > 0) *--sp = accu;
       if (nvars < Max_young_wosize) {
         /* nvars + 1 <= Max_young_wosize, can allocate in minor heap */
-        Alloc_small_byterun(accu, 1 + nvars, Closure_tag);
+        Alloc_small(accu, 1 + nvars, Closure_tag);
         for (i = 0; i < nvars; i++) Field(accu, i + 1) = sp[i];
       } else {
         /* PR#6385: must allocate in major heap */
-        /* caml_alloc_shr and caml_initialize never trigger a GC */
+        /* caml_alloc_shr and caml_initialize never trigger a GC,
+           so no need to Setup_for_gc */
         accu = caml_alloc_shr(1 + nvars, Closure_tag);
         for (i = 0; i < nvars; i++) caml_initialize(&Field(accu, i + 1), sp[i]);
       }
@@ -602,12 +581,13 @@ value caml_interprete(code_t prog, asize_t prog_size)
       value * p;
       if (nvars > 0) *--sp = accu;
       if (blksize <= Max_young_wosize) {
-        Alloc_small_byterun(accu, blksize, Closure_tag);
+        Alloc_small(accu, blksize, Closure_tag);
         p = &Field(accu, nfuncs * 2 - 1);
         for (i = 0; i < nvars; i++, p++) *p = sp[i];
       } else {
         /* PR#6385: must allocate in major heap */
-        /* caml_alloc_shr and caml_initialize never trigger a GC */
+        /* caml_alloc_shr and caml_initialize never trigger a GC,
+           so no need to Setup_for_gc */
         accu = caml_alloc_shr(blksize, Closure_tag);
         p = &Field(accu, nfuncs * 2 - 1);
         for (i = 0; i < nvars; i++, p++) caml_initialize(p, sp[i]);
@@ -696,7 +676,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
       mlsize_t i;
       value block;
       if (wosize <= Max_young_wosize) {
-        Alloc_small_byterun(block, wosize, tag);
+        Alloc_small(block, wosize, tag);
         Field(block, 0) = accu;
         for (i = 1; i < wosize; i++) Field(block, i) = *sp++;
       } else {
@@ -710,7 +690,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
     Instruct(MAKEBLOCK1): {
       tag_t tag = *pc++;
       value block;
-      Alloc_small_byterun(block, 1, tag);
+      Alloc_small(block, 1, tag);
       Field(block, 0) = accu;
       accu = block;
       Next;
@@ -718,7 +698,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
     Instruct(MAKEBLOCK2): {
       tag_t tag = *pc++;
       value block;
-      Alloc_small_byterun(block, 2, tag);
+      Alloc_small(block, 2, tag);
       Field(block, 0) = accu;
       Field(block, 1) = sp[0];
       sp += 1;
@@ -728,7 +708,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
     Instruct(MAKEBLOCK3): {
       tag_t tag = *pc++;
       value block;
-      Alloc_small_byterun(block, 3, tag);
+      Alloc_small(block, 3, tag);
       Field(block, 0) = accu;
       Field(block, 1) = sp[0];
       Field(block, 2) = sp[1];
@@ -741,7 +721,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
       mlsize_t i;
       value block;
       if (size <= Max_young_wosize / Double_wosize) {
-        Alloc_small_byterun(block, size * Double_wosize, Double_array_tag);
+        Alloc_small(block, size * Double_wosize, Double_array_tag);
       } else {
         block = caml_alloc_shr(size * Double_wosize, Double_array_tag);
       }
@@ -767,8 +747,8 @@ value caml_interprete(code_t prog, asize_t prog_size)
     Instruct(GETFIELD):
       accu = Field(accu, *pc); pc++; Next;
     Instruct(GETFLOATFIELD): {
-      double d = Double_flat_field(accu, *pc);
-      Alloc_small_byterun(accu, Double_wosize, Double_tag);
+      double d = Double_flat_field(accu, *pc++);
+      Alloc_small(accu, Double_wosize, Double_tag);
       Store_double_val(accu, d);
       Next;
     }

@@ -39,7 +39,7 @@ static int seek_command_table[] = {
   SEEK_SET, SEEK_CUR, SEEK_END
 };
 
-CAMLprim value unix_lseek(value fd, value ofs, value cmd) NOINLINE
+CAMLprim value NOINLINE unix_lseek(value fd, value ofs, value cmd)
 {
   file_offset ret;
   caml_enter_blocking_section();
@@ -51,7 +51,7 @@ CAMLprim value unix_lseek(value fd, value ofs, value cmd) NOINLINE
   return Val_long(ret);
 }
 
-CAMLprim value unix_lseek_64(value fd, value ofs, value cmd) NOINLINE
+CAMLprim value NOINLINE unix_lseek_64(value fd, value ofs, value cmd)
 {
   file_offset ret;
   /* [ofs] is an Int64, which is stored as a custom block; we must therefore

@@ -46,10 +46,8 @@ extern signal_handler caml_win32_signal(int sig, signal_handler action);
 extern void caml_win32_overflow_detection();
 #endif
 
-#ifdef TARGET_llir
-extern char * caml_code_start, * caml_code_end;
-#else
 extern char * caml_code_area_start, * caml_code_area_end;
+#ifndef TARGET_llir
 extern char caml_system__code_begin, caml_system__code_end;
 #endif
 
@@ -58,8 +56,8 @@ extern char caml_system__code_begin, caml_system__code_end;
 
 #ifdef TARGET_llir
 #define Is_in_code_area(pc) \
- ( ((char *)(pc) >= caml_code_start && \
-    (char *)(pc) <= caml_code_end)     \
+ ( ((char *)(pc) >= caml_code_area_start && \
+    (char *)(pc) <= caml_code_area_end)     \
 || (Classify_addr(pc) & In_code_area) )
 #else
 #define Is_in_code_area(pc) \

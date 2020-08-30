@@ -27,7 +27,7 @@
 #define EWOULDBLOCK (-1)
 #endif
 
-CAMLprim value unix_write(value fd, value buf, value vofs, value vlen) NOINLINE
+CAMLprim value NOINLINE unix_write(value fd, value buf, value vofs, value vlen)
 {
   long ofs, len, written;
   int numbytes, ret;
@@ -63,7 +63,8 @@ CAMLprim value unix_write(value fd, value buf, value vofs, value vlen) NOINLINE
    This problem is avoided in unix_single_write, which is faithful to the
    Unix system call. */
 
-CAMLprim value unix_single_write(value fd, value buf, value vofs, value vlen) NOINLINE
+CAMLprim value NOINLINE unix_single_write(value fd, value buf, value vofs,
+                                          value vlen)
 {
   long ofs, len;
   int numbytes, ret;

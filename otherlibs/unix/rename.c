@@ -19,7 +19,7 @@
 #include <caml/signals.h>
 #include "unixsupport.h"
 
-CAMLprim value unix_rename(value path1, value path2) NOINLINE
+CAMLprim value NOINLINE unix_rename(value path1, value path2)
 {
   CAMLparam2(path1, path2);
   char * p1;

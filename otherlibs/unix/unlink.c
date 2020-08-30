@@ -21,7 +21,7 @@
 #include <caml/osdeps.h>
 #include "unixsupport.h"
 
-CAMLprim value unix_unlink(value path) NOINLINE
+CAMLprim value NOINLINE unix_unlink(value path)
 {
   CAMLparam1(path);
   char_os * p;

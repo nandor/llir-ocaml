@@ -123,7 +123,7 @@ static char_os * parse_ld_conf(void)
 
 /* Open the given shared library and add it to shared_libs.
    Abort on error. */
-static void open_shared_lib(char_os * name) NOINLINE
+static void NOINLINE open_shared_lib(char_os * name)
 {
   char_os * realname;
   char * u8;
@@ -226,7 +226,7 @@ void caml_free_shared_libs(void)
 
 #define Handle_val(v) (*((void **) (v)))
 
-CAMLprim value caml_dynlink_open_lib(value mode, value filename) NOINLINE
+CAMLprim value NOINLINE caml_dynlink_open_lib(value mode, value filename)
 {
   void * handle;
   value result;

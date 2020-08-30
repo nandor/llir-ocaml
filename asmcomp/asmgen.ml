@@ -78,7 +78,7 @@ let rec regalloc ~ppf_dump round fd =
 
 let (++) x f = f x
 
-let (+-) x f = if Config.llir then f x else x
+let (+-) x f = if Config.llir then x else f x
 
 let compile_fundecl ~ppf_dump fd_cmm =
   Proc.init ();
@@ -92,10 +92,10 @@ let compile_fundecl ~ppf_dump fd_cmm =
   ++ pass_dump_if ppf_dump dump_cse "After CSE"
   ++ Profile.record ~accumulate:true "liveness" liveness
   ++ Profile.record ~accumulate:true "deadcode" Deadcode.fundecl
-  ++ pass_dump_if ppf dump_live "Liveness analysis"
-  +- Profile.record ~accumulate:true "spill" Spill.fundecl)
-  +- Profile.record ~accumulate:true "liveness" (liveness ppf)
-  +- pass_dump_if ppf dump_spill "After spilling"
+  ++ pass_dump_if ppf_dump dump_live "Liveness analysis"
+  +- Profile.record ~accumulate:true "spill" Spill.fundecl
+  +- Profile.record ~accumulate:true "liveness" liveness
+  +- pass_dump_if ppf_dump dump_spill "After spilling"
   +- Profile.record ~accumulate:true "split" Split.fundecl
   +- pass_dump_if ppf_dump dump_split "After live range splitting"
   +- Profile.record ~accumulate:true "liveness" liveness

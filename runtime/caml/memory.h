@@ -216,6 +216,27 @@ enum caml_alloc_small_flags {
 
 extern void caml_alloc_small_dispatch (intnat wosize, int flags,
                                        int nallocs, unsigned char* alloc_lens);
+
+#ifdef TARGET_llir
+
+#ifdef NATIVE_CODE
+
+#ifdef WITH_SPACETIME
+#error "llir+spacetime not supported"
+#else
+
+// llir + native code
+
+#endif
+
+#else
+
+// llir + bytecode
+
+#endif
+
+#else
+
 // Do not call asynchronous callbacks from allocation functions
 #define Alloc_small_origin CAML_FROM_C
 #define Alloc_small_aux(result, wosize, tag, profinfo, track) do {     \
@@ -255,6 +276,10 @@ extern uintnat caml_spacetime_my_profinfo(struct ext_table**, uintnat);
   Alloc_small_with_profinfo(result, wosize, tag, (uintnat) 0)
 #define Alloc_small_no_track(result, wosize, tag) \
   Alloc_small_aux(result, wosize, tag, (uintnat) 0, CAML_DONT_TRACK)
+
+#endif
+
+#endif
 
 /* Deprecated alias for [caml_modify] */
 

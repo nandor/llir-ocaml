@@ -94,8 +94,9 @@ static int caml_grow_file(int fd, file_offset size)
 }
 
 
-CAMLprim value NOINLINE MAP_FILE_FUNCTION(value vfd, value vkind, value vlayout,
-                                 value vshared, value vdim, value vstart) NOINLINE
+CAMLprim value NOINLINE caml_unix_map_file(value vfd, value vkind,
+                                           value vlayout, value vshared,
+                                           value vdim, value vstart)
 {
   int fd, flags, major_dim, shared;
   intnat num_dims, i;

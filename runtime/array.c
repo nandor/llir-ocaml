@@ -70,7 +70,11 @@ CAMLprim value caml_array_get_float(value array, value index)
   if (idx < 0 || idx >= Wosize_val(array) / Double_wosize)
     caml_array_bound_error();
   d = Double_flat_field(array, idx);
+#define Setup_for_gc
+#define Restore_after_gc
   Alloc_small(res, Double_wosize, Double_tag);
+#undef Setup_for_gc
+#undef Restore_after_gc
   Store_double_val(res, d);
   return res;
 #else
@@ -103,7 +107,11 @@ CAMLprim value caml_floatarray_get(value array, value index)
   if (idx < 0 || idx >= Wosize_val(array) / Double_wosize)
     caml_array_bound_error();
   d = Double_flat_field(array, idx);
+#define Setup_for_gc
+#define Restore_after_gc
   Alloc_small(res, Double_wosize, Double_tag);
+#undef Setup_for_gc
+#undef Restore_after_gc
   Store_double_val(res, d);
   return res;
 }
@@ -167,7 +175,11 @@ CAMLprim value caml_array_unsafe_get_float(value array, value index)
   value res;
 
   d = Double_flat_field(array, idx);
+#define Setup_for_gc
+#define Restore_after_gc
   Alloc_small(res, Double_wosize, Double_tag);
+#undef Setup_for_gc
+#undef Restore_after_gc
   Store_double_val(res, d);
   return res;
 #else /* FLAT_FLOAT_ARRAY */
@@ -197,7 +209,11 @@ CAMLprim value caml_floatarray_unsafe_get(value array, value index)
 
   CAMLassert (Tag_val(array) == Double_array_tag);
   d = Double_flat_field(array, idx);
+#define Setup_for_gc
+#define Restore_after_gc
   Alloc_small(res, Double_wosize, Double_tag);
+#undef Setup_for_gc
+#undef Restore_after_gc
   Store_double_val(res, d);
   return res;
 }
@@ -254,7 +270,11 @@ CAMLprim value caml_floatarray_create(value len)
     if (wosize == 0)
       return Atom(0);
     else
+#define Setup_for_gc
+#define Restore_after_gc
       Alloc_small (result, wosize, Double_array_tag);
+#undef Setup_for_gc
+#undef Restore_after_gc
   }else if (wosize > Max_wosize)
     caml_invalid_argument("Float.Array.create");
   else {

@@ -166,8 +166,8 @@ typedef uint64_t uintnat;
    as first-class values (GCC 2.x). */
 
 #if defined(__GNUC__) && __GNUC__ >= 2 && !defined(DEBUG) \
-    && !defined (SHRINKED_GNUC) && !defined(CAML_JIT)
-//#define THREADED_CODE
+    && !defined (SHRINKED_GNUC) && !defined(CAML_JIT) && !defined(TARGET_llir)
+#define THREADED_CODE
 #endif
 
 

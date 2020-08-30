@@ -57,7 +57,6 @@ static void init_static(void)
 {
 #ifdef TARGET_llir
   extern char *caml_data_begin, *caml_data_end;
-  extern char *caml_code_begin, *caml_code_end;
 #else
   extern struct segment caml_data_segments[], caml_code_segments[];
   int i;
@@ -69,7 +68,9 @@ static void init_static(void)
   /* PR#5509: we must include the zero word at end of data segment,
      because pointers equal to caml_data_segments[i].end are static data. */
 #ifdef TARGET_llir
-  if (caml_page_table_add(In_static_data, caml_data_begin, caml_data_end + sizeof(value)) != 0)
+  if (caml_page_table_add(In_static_data,
+                          caml_data_begin,
+                          caml_data_end + sizeof(value)) != 0)
     caml_fatal_error("Fatal error: not enough memory for initial page table");
 #else
   for (i = 0; caml_data_segments[i].begin != 0; i++) {
@@ -91,13 +92,8 @@ static void init_static(void)
 
   /* Register the code in the table of code fragments */
   cf = caml_stat_alloc(sizeof(struct code_fragment));
-#ifdef TARGET_llir
-  cf->code_start = caml_code_begin;
-  cf->code_end = caml_code_end;
-#else
   cf->code_start = caml_code_area_start;
   cf->code_end = caml_code_area_end;
-#endif
   cf->digest_computed = 0;
   caml_ext_table_init(&caml_code_fragments_table, 8);
   caml_ext_table_add(&caml_code_fragments_table, cf);

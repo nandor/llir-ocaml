@@ -20,7 +20,7 @@
 #include <caml/signals.h>
 #include "unixsupport.h"
 
-CAMLprim value unix_mkdir(value path, value perm) NOINLINE
+CAMLprim value NOINLINE unix_mkdir(value path, value perm)
 {
   CAMLparam2(path, perm);
   char * p;

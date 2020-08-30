@@ -55,7 +55,7 @@ static int open_cloexec_table[15] = {
   CLOEXEC, KEEPEXEC
 };
 
-CAMLprim value unix_open(value path, value flags, value perm) NOINLINE
+CAMLprim value NOINLINE unix_open(value path, value flags, value perm)
 {
   CAMLparam3(path, flags, perm);
   int fd, cv_flags, clo_flags, cloexec;

@@ -29,6 +29,9 @@
 #include "caml/stacks.h"
 #include "caml/signals.h"
 
+#define Setup_for_gc
+#define Restore_after_gc
+
 CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
 {
   value result;

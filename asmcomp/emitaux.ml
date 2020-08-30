@@ -49,7 +49,7 @@ let emit_string_literal s =
       if !last_was_escape
       then Printf.fprintf !output_channel "\\%o" (Char.code c)
       else output_char !output_channel c
-    else if c >= ' ' && c <= '~' && c <> '"' && c <> '\\' then begin
+    else if c >= ' ' && c <= '~' && c <> '"' (* '"' *) && c <> '\\' then begin
       output_char !output_channel c;
       last_was_escape := false
     end else begin

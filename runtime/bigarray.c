@@ -1066,7 +1066,7 @@ CAMLprim value caml_ba_sub(value vb, value vofs, value vlen)
 #define LEAVE_RUNTIME_OP_CUTOFF 4096
 #define is_mmapped(ba) ((ba)->flags & CAML_BA_MAPPED_FILE)
 
-CAMLprim value caml_ba_blit(value vsrc, value vdst) NOINLINE
+CAMLprim value NOINLINE caml_ba_blit(value vsrc, value vdst)
 {
   CAMLparam2(vsrc, vdst);
   struct caml_ba_array * src = Caml_ba_array_val(vsrc);
@@ -1118,7 +1118,7 @@ CAMLprim value caml_ba_blit(value vsrc, value vdst) NOINLINE
   FILL_GEN_LOOP(num_elts + num_elts,                                         \
     for (p = data; num_elts > 0; num_elts--) { *p++ = init0; *p++ = init1; })
 
-CAMLprim value caml_ba_fill(value vb, value vinit) NOINLINE
+CAMLprim value NOINLINE caml_ba_fill(value vb, value vinit)
 {
   CAMLparam1(vb);
   struct caml_ba_array * b = Caml_ba_array_val(vb);

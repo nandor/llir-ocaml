@@ -27,7 +27,7 @@
 
 #ifdef HAS_TRUNCATE
 
-CAMLprim value unix_ftruncate(value fd, value len) NOINLINE
+CAMLprim value NOINLINE unix_ftruncate(value fd, value len)
 {
   int result;
   caml_enter_blocking_section();
@@ -37,7 +37,7 @@ CAMLprim value unix_ftruncate(value fd, value len) NOINLINE
   return Val_unit;
 }
 
-CAMLprim value unix_ftruncate_64(value fd, value len) NOINLINE
+CAMLprim value NOINLINE unix_ftruncate_64(value fd, value len)
 {
   int result;
   file_offset ofs = File_offset_val(len);
