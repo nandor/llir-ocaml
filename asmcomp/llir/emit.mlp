@@ -21,6 +21,7 @@ open Mach
 open Linearize
 open Emitaux
 open Reg
+open Linear
 
 let emit_symbol s = Emitaux.emit_symbol '$' s
 
@@ -308,12 +309,12 @@ let emit_linear body =
         `  add.i64 {emit_temp addr}, {emit_reg arg.(1)}, {emit_temp imm}\n`;
         `  st [{emit_temp addr}], {ext ()}\n`
       );
-    | Ialloc { words } ->
-      let args = match words with
+    | Ialloc { bytes } ->
+      let args = match bytes with
         | 16 -> [emit_addr "caml_alloc1"]
         | 24 -> [emit_addr "caml_alloc2"]
         | 32 -> [emit_addr "caml_alloc3"]
-        | _  -> [emit_addr "caml_allocN"; emit_const words]
+        | _  -> [emit_addr "caml_allocN"; emit_const bytes]
       in
       `  {emit_call !handlers}.i64.caml_alloc {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_frame{emit_value res}\n`
     | Iintop(op) ->
@@ -344,12 +345,10 @@ let emit_linear body =
   in
 
   let emit_instr arg res = function
-    | Lend ->
+    | Lprologue | Lend | Lreloadretaddr | Ladjust_trap_depth _ ->
       ()
     | Lop(op) ->
       emit_op arg res op
-    | Lreloadretaddr ->
-      ()
     | Lreturn ->
       `  ret {emit_regs arg " " ""}\n`;
     | Llabel(label) ->
@@ -421,7 +420,8 @@ let emit_linear body =
         if i + 1 <> n then `, ` else ()
       ) labels;
       `\n`
-    | Lsetuptrap(label) ->
+    | Lentertrap ->
+      (*
       let handler = new_label () in
       Hashtbl.add traps label handler;
       let exn_addr = make_temp () in
@@ -434,7 +434,10 @@ let emit_linear body =
       `{emit_label handler}:\n`;
       `  mov.i64 {emit_temp val_addr}, caml_exn_val\n`;
       `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}] @caml_value\n`
-    | Lpushtrap ->
+      *)
+      failwith "Lsetuptrap"
+    | Lpushtrap { lbl_handler } ->
+      (*
       let handler =
         try Some (Hashtbl.find traps !current_block)
         with Not_found -> None
@@ -455,7 +458,10 @@ let emit_linear body =
       `  mov.i64 {emit_temp sp_val}, $rsp\n`;
       `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
       `  st.8 [{emit_temp exc_addr}], {emit_temp jmp_frame}\n`
+      *)
+      failwith "Lpushtrap"
     | Lpoptrap ->
+      (*
       handlers := List.tl !handlers;
       let exc_addr = emit_addr "caml_exception_pointer" in
       let exc_val = make_temp () in
@@ -464,6 +470,8 @@ let emit_linear body =
       `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
       `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
       `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
+      *)
+      failwith "Lpoptrap"
     | Lraise(raise) ->
       (match raise with
       | _ when no_handler !handlers ->

@@ -16,13 +16,27 @@
 
 open Cmm
 open Reg
+open Mach
 
-type reg = Arg | Param | Result | Generic
+let word_addressed = false
 
 let num_register_classes = 2
+
+let register_class reg = match reg.typ with
+  | Float -> 1
+  | _ -> 0
+
 let num_available_registers = [| 0; 0 |]
+
 let first_available_register = [| 0; 0 |]
+
+let register_name reg = "$" ^ string_of_int reg
+
+let phys_reg _ = Reg.dummy
+
 let rotate_registers = false
+
+type reg = Arg | Param | Result | Generic
 
 let register i t typ =
   let key = match t with
@@ -33,56 +47,54 @@ let register i t typ =
   in
   Reg.at_location typ (Reg key)
 
-let phys_reg _ = assert false
-
-let op_is_pure _op =
-  false
-
-let regs_are_volatile _regs =
-  false
-
-let destroyed_at_raise = [| |]
-let destroyed_at_oper _ = [| |]
-
-let safe_register_pressure _arg = max_int
-let max_register_pressure _arg = [| 13; 13 |]
-
-let max_arguments_for_tailcalls  = 10
-let loc_spacetime_node_hole = Reg.dummy
-let loc_exn_bucket = register 0 Generic Val
-
-
 let loc_arguments arg =
   (* Outgoing parameters to a call. *)
   (Array.mapi (fun i arg -> register i Arg arg.typ) arg, 0)
-
-let loc_parameters arg =
-  (* Incoming parameters to a function. *)
-  Array.mapi (fun i arg -> register i Param arg.typ) arg
 
 let loc_results arg =
   (* Outgoing results from a call. *)
   Array.mapi (fun i arg -> register i Result arg.typ) arg
 
-
-let loc_external_results res =
-  Array.mapi (fun i arg -> register i Result arg.typ) res
+let loc_parameters arg =
+  (* Incoming parameters to a function. *)
+  Array.mapi (fun i arg -> register i Param arg.typ) arg
 
 let loc_external_arguments arg =
   let loc = arg |> Array.mapi (fun i arg -> [| register i Arg arg.(0).typ |])
   in (loc, 0)
 
+let loc_external_results res =
+  Array.mapi (fun i arg -> register i Result arg.typ) res
 
-let register_name reg = "$" ^ string_of_int reg
+let loc_exn_bucket = register 0 Generic Val
 
-let register_class reg = match reg.typ with
-  | Float -> 1
-  | _ -> 0
+let loc_spacetime_node_hole = Reg.dummy
 
-let word_addressed = false
+let max_arguments_for_tailcalls = 10
 
-let num_stack_slots = [| 0; 0 |]
-let contains_calls = ref false
+let safe_register_pressure _op = max_int
+let max_register_pressure _op = [| Int.max_int; Int.max_int |]
+
+let destroyed_at_oper _ = [| |]
+let destroyed_at_raise = [| |]
+let destroyed_at_reloadretaddr = [| |]
+
+let regs_are_volatile _ = false
+
+let op_is_pure = function
+  | Icall_ind _ | Icall_imm _ | Itailcall_ind _ | Itailcall_imm _
+  | Iextcall _ | Istackoffset _ | Istore _ | Ialloc _
+  | Iintop(Icheckbound _) | Iintop_imm(Icheckbound _, _) -> false
+  | Ispecific _ -> true
+  | _ -> true
+
+let frame_required _ = false
+
+let prologue_required _ = false
+
+let dwarf_register_numbers ~reg_class:_ = [| 0; 0 |]
+
+let stack_ptr_dwarf_register_number = 0
 
 let assemble_file infile outfile =
   let infile = Filename.quote infile in

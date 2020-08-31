@@ -55,7 +55,7 @@ struct segment { char * begin; char * end; };
 
 static void init_static(void)
 {
-#ifdef TARGET_llir
+#ifdef __llir__
   extern char *caml_data_begin, *caml_data_end;
 #else
   extern struct segment caml_data_segments[], caml_code_segments[];
@@ -67,7 +67,7 @@ static void init_static(void)
 
   /* PR#5509: we must include the zero word at end of data segment,
      because pointers equal to caml_data_segments[i].end are static data. */
-#ifdef TARGET_llir
+#ifdef __llir__
   if (caml_page_table_add(In_static_data,
                           caml_data_begin,
                           caml_data_end + sizeof(value)) != 0)

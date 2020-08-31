@@ -854,7 +854,7 @@ enable_flambda_invariants
 with_target_bindir
 enable_reserved_header_bits
 enable_stdlib_manpages
-enable_with_llir
+enable_llir
 enable_force_safe_string
 enable_flat_float_array
 enable_function_sections
@@ -3186,9 +3186,9 @@ fi
 
 
 
-# Check whether --enable-with-llir was given.
-if test "${enable_with_llir+set}" = set; then :
-  enableval=$enable_with_llir;
+# Check whether --enable-llir was given.
+if test "${enable_llir+set}" = set; then :
+  enableval=$enable_llir;
 fi
 
 
@@ -3266,6 +3266,17 @@ else
 fi
 else
   with_camltex="true"
+fi
+
+# Override options for LLIR.
+if test x"$enable_llir" = "xyes"; then :
+  llir=true
+   ac_tool_prefix=llir-
+   LD=llir-ld
+   CC=llir-gcc
+   AS=llir-as
+else
+  llir=false
 fi
 
 # Initialization of libtool
@@ -12567,9 +12578,9 @@ esac
   flexlink="flexlink -chain $flavor -merge-manifest -stack 16777216"
       flexdir=`$flexlink -where | tr -d '\015'`
       if test -z "$flexdir"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: flexlink not found: native shared libraries won't be available.
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: flexlink not found: native shared libraries will not be available.
         " >&5
-$as_echo "$as_me: WARNING: flexlink not found: native shared libraries won't be available.
+$as_echo "$as_me: WARNING: flexlink not found: native shared libraries will not be available.
         " >&2;}
         with_sharedlibs=false
 else
@@ -13858,7 +13869,11 @@ esac
 if test -n "$host_alias"; then :
   toolpref="${host_alias}-"
 else
-  toolpref=""
+  if test x"$enable_llir" = "xyes"; then :
+  toolpref="llir-"
+else
+  llir=""
+fi
 fi
 
 # We first compute default values for as and aspp
@@ -17058,10 +17073,8 @@ else
   stdlib_manpages=false
 fi
 
-if test x"$with_llir" = "xyes"; then :
-  llir=true
-else
-  llir=false
+if test x"$enable_llir" = "xyes"; then :
+  arch=llir
 fi
 
 cat >confcache <<\_ACEOF

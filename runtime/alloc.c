@@ -29,6 +29,29 @@
 #include "caml/stacks.h"
 #include "caml/signals.h"
 
+#ifdef __llir__
+
+value NOINLINE caml_alloc_small_aux(intnat wosize, tag_t tag, uintnat profinfo,
+                                    int track)
+{
+  value result;
+
+  CAMLassert (wosize >= 1);
+  CAMLassert (tag < 256);
+  CAMLassert (wosize <= Max_young_wosize);
+  Caml_state_field(young_ptr) -= Whsize_wosize(wosize);
+  if (Caml_state_field(young_ptr) < Caml_state_field(young_limit)) {
+    caml_alloc_small_dispatch(wosize, track | CAML_FROM_C, 1, NULL);
+  }
+  Hd_hp (Caml_state_field(young_ptr)) =
+      Make_header_with_profinfo (wosize, tag, 0, profinfo);
+  result = Val_hp (Caml_state_field(young_ptr));
+  DEBUG_clear(result, wosize);
+  return result;
+}
+
+#endif
+
 #define Setup_for_gc
 #define Restore_after_gc
 

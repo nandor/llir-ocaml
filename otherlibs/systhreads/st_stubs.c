@@ -82,7 +82,7 @@ struct caml_thread_struct {
   char * exception_pointer; /* Saved value of Caml_state->exception_pointer */
   struct caml__roots_block * local_roots; /* Saved value of local_roots */
   struct longjmp_buffer * exit_buf; /* For thread exit */
-#ifdef TARGET_llir
+#ifdef __llir__
   struct caml_context *callback_link;
 #endif
 #ifdef WITH_SPACETIME
@@ -183,7 +183,7 @@ Caml_inline void caml_thread_save_runtime_state(void)
   curr_thread->last_retaddr = Caml_state->last_return_address;
   curr_thread->gc_regs = Caml_state->gc_regs;
   curr_thread->exception_pointer = Caml_state->exception_pointer;
-#ifdef TARGET_llir
+#ifdef __llir__
   curr_thread->callback_link = Caml_state->callback_link;
 #endif
 #ifdef WITH_SPACETIME
@@ -215,7 +215,7 @@ Caml_inline void caml_thread_restore_runtime_state(void)
   Caml_state->last_return_address = curr_thread->last_retaddr;
   Caml_state->gc_regs = curr_thread->gc_regs;
   Caml_state->exception_pointer = curr_thread->exception_pointer;
-#ifdef TARGET_llir
+#ifdef __llir__
   caml_callback_link = curr_thread->callback_link;
 #endif
 #ifdef WITH_SPACETIME
@@ -362,7 +362,7 @@ static caml_thread_t caml_thread_new_info(void)
   th->exception_pointer = NULL;
   th->local_roots = NULL;
   th->exit_buf = NULL;
-#ifdef TARGET_llir
+#ifdef __llir__
   th->callback_link = NULL;
 #endif
 #ifdef WITH_SPACETIME

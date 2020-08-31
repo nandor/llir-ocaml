@@ -47,14 +47,14 @@ extern void caml_win32_overflow_detection();
 #endif
 
 extern char * caml_code_area_start, * caml_code_area_end;
-#ifndef TARGET_llir
+#ifndef __llir__
 extern char caml_system__code_begin, caml_system__code_end;
 #endif
 
 /* Do not use the macro from address_class.h here. */
 #undef Is_in_code_area
 
-#ifdef TARGET_llir
+#ifdef __llir__
 #define Is_in_code_area(pc) \
  ( ((char *)(pc) >= caml_code_area_start && \
     (char *)(pc) <= caml_code_area_end)     \
@@ -200,7 +200,7 @@ DECLARE_SIGNAL_HANDLER(trap_handler)
 
 /* Machine- and OS-dependent handling of stack overflow */
 
-#ifdef HAS_STACK_OVERFLOW_DETECTION
+#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
 #ifndef CONTEXT_SP
 #error "CONTEXT_SP is required if HAS_STACK_OVERFLOW_DETECTION is defined"
 #endif
@@ -291,7 +291,7 @@ void caml_init_signals(void)
   }
 #endif
 
-#ifdef HAS_STACK_OVERFLOW_DETECTION
+#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
   {
     stack_t stk;
     struct sigaction act;
@@ -308,7 +308,7 @@ void caml_init_signals(void)
 
 void caml_setup_stack_overflow_detection(void)
 {
-#ifdef HAS_STACK_OVERFLOW_DETECTION
+#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
   stack_t stk;
   stk.ss_sp = malloc(SIGSTKSZ);
   stk.ss_size = SIGSTKSZ;

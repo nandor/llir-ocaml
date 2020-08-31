@@ -345,7 +345,7 @@ AC_ARG_ENABLE([stdlib-manpages],
 AC_ARG_VAR([WINDOWS_UNICODE_MODE],
   [how to handle Unicode under Windows: ansi, compatible])
 
-AC_ARG_ENABLE([with-llir],
+AC_ARG_ENABLE([llir],
   [AS_HELP_STRING([--enable-llir],
     [enable the llir post-link optimiser])])
 
@@ -408,6 +408,15 @@ AS_IF([test x"$enable_unix_lib" = "xno" -o x"$enable_str_lib" = "xno"],
     [enable_ocamldoc="no"
      with_camltex=""])],
   [with_camltex="true"])
+
+# Override options for LLIR.
+AS_IF([test x"$enable_llir" = "xyes"],
+  [llir=true
+   ac_tool_prefix=llir-
+   LD=llir-ld
+   CC=llir-gcc
+   AS=llir-as],
+  [llir=false])
 
 # Initialization of libtool
 # Allow the MSVC linker to be found even if ld isn't installed.
@@ -654,7 +663,7 @@ AS_CASE([$CC,$host],
       flexdir=`$flexlink -where | tr -d '\015'`
       AS_IF([test -z "$flexdir"],
         [AC_MSG_WARN(
-          [flexlink not found: native shared libraries won't be available.]
+          [flexlink not found: native shared libraries will not be available.]
         )
         with_sharedlibs=false],
         [iflexdir="-I\"$flexdir\""
@@ -1022,7 +1031,9 @@ AS_CASE([$arch],
 
 # Assembler
 
-AS_IF([test -n "$host_alias"], [toolpref="${host_alias}-"], [toolpref=""])
+AS_IF([test -n "$host_alias"],
+  [toolpref="${host_alias}-"],
+  [AS_IF([test x"$enable_llir" = "xyes"], [toolpref="llir-"], [llir=""])])
 
 # We first compute default values for as and aspp
 # If values have been given by the user then they take precedence over
@@ -1939,8 +1950,8 @@ AS_CASE([$host],
 AS_IF([test x"$enable_stdlib_manpages" != "xno"],
   [stdlib_manpages=true],[stdlib_manpages=false])
 
-AS_IF([test x"$with_llir" = "xyes"],
-  [llir=true],
-  [llir=false])
+AS_IF([test x"$enable_llir" = "xyes"],
+  [arch=llir],
+  [])
 
 AC_OUTPUT

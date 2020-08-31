@@ -122,7 +122,7 @@ static double mt_generate_uniform(void)
    The result is clipped in [1..Max_long] */
 static uintnat mt_generate_geom(void)
 {
-  double res;
+  uintnat res;
   CAMLassert(lambda > 0.);
   /* We use the float versions of exp/log, since these functions are
      significantly faster, and we really don't need much precision

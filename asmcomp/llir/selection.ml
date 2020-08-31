@@ -23,7 +23,7 @@ class selector = object
   method is_immediate _ = true
 
   method select_addressing _chunk = function
-    | Cop((Cadda | Caddv), [arg; Cconst_int n], _) ->
+    | Cop((Cadda | Caddv), [arg; Cconst_int(n, _)], _) ->
       (Iindexed n, arg)
     | arg ->
       (Iindexed 0, arg)

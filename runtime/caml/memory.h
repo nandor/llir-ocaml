@@ -217,23 +217,13 @@ enum caml_alloc_small_flags {
 extern void caml_alloc_small_dispatch (intnat wosize, int flags,
                                        int nallocs, unsigned char* alloc_lens);
 
-#ifdef TARGET_llir
+#if defined(__llir__) && defined(NATIVE_CODE)
 
-#ifdef NATIVE_CODE
+value caml_alloc_small_aux(intnat wosize, tag_t tag, uintnat profinfo,
+                           int origin);
 
-#ifdef WITH_SPACETIME
-#error "llir+spacetime not supported"
-#else
-
-// llir + native code
-
-#endif
-
-#else
-
-// llir + bytecode
-
-#endif
+#define Alloc_small_aux(result, wosize, tag, profinfo, track) \
+  (result = caml_alloc_small_aux(wosize, tag, profinfo, track))
 
 #else
 
@@ -256,6 +246,8 @@ extern void caml_alloc_small_dispatch (intnat wosize, int flags,
   DEBUG_clear ((result), (wosize));                                    \
 }while(0)
 
+#endif
+
 #define Alloc_small_with_profinfo(result, wosize, tag, profinfo) \
   Alloc_small_aux(result, wosize, tag, profinfo, CAML_DO_TRACK)
 
@@ -276,8 +268,6 @@ extern uintnat caml_spacetime_my_profinfo(struct ext_table**, uintnat);
   Alloc_small_with_profinfo(result, wosize, tag, (uintnat) 0)
 #define Alloc_small_no_track(result, wosize, tag) \
   Alloc_small_aux(result, wosize, tag, (uintnat) 0, CAML_DONT_TRACK)
-
-#endif
 
 #endif
 

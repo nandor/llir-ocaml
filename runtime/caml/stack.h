@@ -62,7 +62,9 @@
 
 #ifdef TARGET_amd64
 #define Saved_return_address(sp) *((intnat *)((sp) - 8))
+#ifndef __llir__
 #define Callback_link(sp) ((struct caml_context *)((sp) + 16))
+#endif
 #endif
 
 #ifdef TARGET_arm64
@@ -75,17 +77,13 @@
 #define Callback_link(sp) ((struct caml_context *)((sp) + 16))
 #endif
 
-#ifdef TARGET_llir
-#define Saved_return_address(sp) *((intnat *)((sp) - 8))
-#endif
-
 /* Structure of OCaml callback contexts */
 
 struct caml_context {
   char * bottom_of_stack;            /* beginning of OCaml stack chunk */
   uintnat last_retaddr;              /* last return address in OCaml code */
   value * gc_regs;                   /* pointer to register block */
-#ifdef TARGET_llir
+#ifdef __llir__
   struct caml_context *next_context; /* link to the next OCaml context */
 #endif
 #ifdef WITH_SPACETIME
@@ -141,7 +139,7 @@ extern uintnat (*caml_stack_usage_hook)(void);
 extern value * caml_globals[];
 extern char caml_globals_map[];
 extern intnat caml_globals_inited;
-#ifdef TARGET_llir
+#ifdef __llir__
 extern struct caml_context *caml_callback_link;
 extern intnat * caml_llir_frametable;
 #else
