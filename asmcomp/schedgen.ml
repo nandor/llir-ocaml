@@ -166,7 +166,7 @@ method oper_in_basic_block = function
 
 method private instr_in_basic_block instr try_nesting =
   match instr.desc with
-    Lop op ->
+    Lop (op, _) ->
       self#oper_in_basic_block op &&
       not (try_nesting > 0 && self#is_checkbound op)
   | Lreloadretaddr -> true
@@ -191,17 +191,17 @@ method is_checkbound = function
 
 method private instr_is_store instr =
   match instr.desc with
-    Lop op -> self#is_store op
+    Lop (op, _) -> self#is_store op
   | _ -> false
 
 method private instr_is_load instr =
   match instr.desc with
-    Lop op -> self#is_load op
+    Lop (op, _) -> self#is_load op
   | _ -> false
 
 method private instr_is_checkbound instr =
   match instr.desc with
-    Lop op -> self#is_checkbound op
+    Lop (op, _) -> self#is_checkbound op
   | _ -> false
 
 (* Estimate the latency of an operation. *)
@@ -216,7 +216,7 @@ method reload_retaddr_latency = self#oper_latency some_load
 
 method private instr_latency instr =
   match instr.desc with
-    Lop op -> self#oper_latency op
+    Lop (op, _) -> self#oper_latency op
   | Lreloadretaddr -> self#reload_retaddr_latency
   | _ -> assert false
 
@@ -232,7 +232,7 @@ method reload_retaddr_issue_cycles = self#oper_issue_cycles some_load
 
 method private instr_issue_cycles instr =
   match instr.desc with
-    Lop op -> self#oper_issue_cycles op
+    Lop (op, _) -> self#oper_issue_cycles op
   | Lreloadretaddr -> self#reload_retaddr_issue_cycles
   | _ -> assert false
 
@@ -240,7 +240,7 @@ method private instr_issue_cycles instr =
 
 method private destroyed_by_instr instr =
   match instr.desc with
-  | Lop op -> Proc.destroyed_at_oper (Iop op)
+  | Lop (op, _) -> Proc.destroyed_at_oper (Iop op)
   | Lreloadretaddr -> [||]
   | _ -> assert false
 
@@ -362,7 +362,7 @@ method schedule_fundecl f =
     | Lend -> i
     | Lpushtrap { lbl_handler = _; }
       -> { i with next = schedule i.next (try_nesting + 1) }
-    | Lpoptrap -> { i with next = schedule i.next (try_nesting - 1) }
+    | Lpoptrap _ -> { i with next = schedule i.next (try_nesting - 1) }
     | _ ->
         if self#instr_in_basic_block i try_nesting then begin
           clear_code_dag();
@@ -376,8 +376,8 @@ method schedule_fundecl f =
     else begin
       let critical_outputs =
         match i.desc with
-          Lop(Icall_ind _ | Itailcall_ind _) -> [| i.arg.(0) |]
-        | Lop(Icall_imm _ | Itailcall_imm _ | Iextcall _) -> [||]
+          Lop((Icall_ind _ | Itailcall_ind _), _) -> [| i.arg.(0) |]
+        | Lop((Icall_imm _ | Itailcall_imm _ | Iextcall _), _) -> [||]
         | Lreturn -> [||]
         | _ -> i.arg in
       List.iter (fun x -> ignore (longest_path critical_outputs x)) ready_queue;
@@ -388,6 +388,7 @@ method schedule_fundecl f =
     let new_body = schedule f.fun_body 0 in
     clear_code_dag();
     { fun_name = f.fun_name;
+      fun_args = f.fun_args;
       fun_body = new_body;
       fun_fast = f.fun_fast;
       fun_dbg  = f.fun_dbg;

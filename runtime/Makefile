@@ -51,7 +51,11 @@ ASM_EXT := asm
 ASM_SOURCES := $(ARCH)nt.$(ASM_EXT)
 else
 ASM_EXT := S
+ifeq "$(LLIR)" "true"
+ASM_SOURCES := llir.$(ASM_EXT)
+else
 ASM_SOURCES := $(ARCH).$(ASM_EXT)
+endif
 endif
 
 # Targets to build and install

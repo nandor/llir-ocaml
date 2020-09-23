@@ -53,25 +53,35 @@ caml_raise_exn:
   .args             i64
   trap
 
-
-
 ################################################################################
-# caml_raise_exception
+# caml_raise_regular
 ################################################################################
   .text
-  .globl caml_raise_exception
-caml_raise_exception:
+  .globl caml_raise_regular
+caml_raise_regular:
   .call       c
   .args       i64
   trap
 
 ################################################################################
-# caml_exn_val
+# caml_raise_notrace
 ################################################################################
-  .data
-  .globl caml_exn_val
-caml_exn_val:
-  .quad 0
+  .text
+  .globl caml_raise_notrace
+caml_raise_notrace:
+  .call       c
+  .args       i64
+  trap
+
+################################################################################
+# caml_raise_reraise
+################################################################################
+  .text
+  .globl caml_raise_reraise
+caml_raise_reraise:
+  .call       c
+  .args       i64
+  trap
 
 ################################################################################
 # caml_start_program
@@ -93,7 +103,6 @@ caml_start_program_helper:
   .stack_object     1, 32, 8
   .args             i64, i64, i64, i64, i64
   trap
-
 
 ################################################################################
 # caml_stack_overflow

@@ -18,7 +18,6 @@
 open Arch
 open Cmm
 open Mach
-open Linearize
 open Emitaux
 open Reg
 open Linear
@@ -27,33 +26,15 @@ let emit_symbol s = Emitaux.emit_symbol '$' s
 
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
-let emit_linear body =
+let fundecl f =
+  `  .text\n`;
+  `  .globl {emit_symbol f.fun_name}\n`;
+  `{emit_symbol f.fun_name}:\n`;
+  `  .call\tcaml\n`;
+
   let bound_error_labels = ref [] in
 
-  (* Find the next available virtual register *)
-  let params = Hashtbl.create 10 in
-  let rec find_regs i =
-    let max_reg = function
-      | { loc = Reg r; typ } ->
-        (match r land 7 with
-        | 0 -> (* argument *)   ()
-        | 1 -> (* param *)      Hashtbl.replace params r ((r lsr 3), typ)
-        | 2 -> (* result *)     ()
-        | 3 -> (* generic *)    ()
-        | 4 -> (* allocated *)  ()
-        | 5 -> (* temporary *)  ()
-        | _ -> assert false
-        )
-      | { loc = Unknown } ->
-        ()
-      | { loc = Stack _ } ->
-        ()
-    in
-    i.arg |> Array.iter max_reg;
-    i.res |> Array.iter max_reg;
-    if i.desc <> Lend then find_regs i.next
-  in
-
+  (* Emit sequentially numbered temporaries *)
   let next_reg = ref 0 in
   let make_temp () =
     let n = !next_reg in
@@ -92,7 +73,7 @@ let emit_linear body =
   in
 
   let emit_reg = function
-    | {loc = Reg r} ->
+    | { loc = Reg r } ->
       emit_string ("$" ^ string_of_int r)
     | { stamp } ->
       emit_string ("$" ^ string_of_int ((stamp lsl 3) lor 4))
@@ -133,37 +114,33 @@ let emit_linear body =
   let call_types res =
     String.concat ""
       (List.map
-        (fun reg -> match reg.typ with
-        | Float -> ".f64"
-        | _ -> ".i64"
-        )
-        (Array.to_list res)
-      )
+        (fun reg ->
+          match reg.typ with
+          | Float -> ".f64"
+          | _ -> ".i64")
+        (Array.to_list res))
+  in
+
+  let domain_field f =
+    let field = make_temp () in
+    let base = emit_addr "Caml_state" in
+    let offset = emit_const (Domainstate.idx_of_field f * 8) in
+    `  add.i64 {emit_temp field}, {emit_temp base}, {emit_temp offset}\n`;
+    field
   in
 
   (* Exception handler stack *)
-  let current_block = ref 0 in
-  let handlers = ref [] in
-  let traps = Hashtbl.create 16 in
-  let rec no_handler = function
-    | [] -> true
-    | Some _ :: _ -> false
-    | None :: hs ->  no_handler hs
+  let emit_call = function
+    | None -> emit_string "call"
+    | Some _ -> emit_string "invoke"
   in
 
-  let rec emit_call = function
-    | Some _ :: _ -> emit_string "invoke"
-    | None :: hs -> emit_call hs
-    | [] -> emit_string "call"
+  let emit_handler = function
+    | None -> ()
+    | Some h -> `, {emit_label h}`
   in
 
-  let rec emit_handler = function
-    | Some h :: _ -> `, {emit_label h}`
-    | None :: hs -> emit_handler hs
-    | [] -> ()
-  in
-
-  let emit_intop res lhs rhs op =
+  let emit_intop res lhs rhs op handler =
     let emit inst =
       `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}{emit_value res}\n`
     in
@@ -193,8 +170,8 @@ let emit_linear body =
     | Icomp cc ->
         `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
     | Icheckbound _ ->
-      let handler = match !handlers with [] -> None | h :: _ -> h in
-      let label = match List.assoc_opt handler !bound_error_labels with
+      let label =
+        match List.assoc_opt handler !bound_error_labels with
         | None ->
           let label = new_label () in
           bound_error_labels := (handler, label) :: !bound_error_labels;
@@ -207,7 +184,7 @@ let emit_linear body =
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
-  let emit_op arg res = function
+  let emit_op arg res handler = function
     | Imove ->
       `  mov.{emit_type res.(0).typ} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
     | Ispill  -> assert false
@@ -220,12 +197,12 @@ let emit_linear body =
       `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}{emit_value res}\n`;
     | Icall_ind _ ->
       let types = call_types res in
-      `  {emit_call !handlers}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler !handlers} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler handler} @caml_frame{emit_value res}\n`
     | Icall_imm { func } ->
       let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  {emit_call !handlers}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler !handlers} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler handler} @caml_frame{emit_value res}\n`
     | Itailcall_ind(_) ->
       `  tcall.i64.caml {emit_regs arg " " ""} @caml_frame\n`
     | Itailcall_imm { func } ->
@@ -237,9 +214,9 @@ let emit_linear body =
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       if alloc then begin
-        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}  @caml_frame{emit_value res}\n`
+        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler}  @caml_frame{emit_value res}\n`
       end else begin
-        `  {emit_call !handlers}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler !handlers}{emit_value res}\n`
+        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler}{emit_value res}\n`
       end
     | Istackoffset(_) ->
       assert false
@@ -316,12 +293,12 @@ let emit_linear body =
         | 32 -> [emit_addr "caml_alloc3"]
         | _  -> [emit_addr "caml_allocN"; emit_const bytes]
       in
-      `  {emit_call !handlers}.i64.caml_alloc {emit_reg res.(0)}, {emit_temps args}{emit_handler !handlers} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}.i64.caml_alloc {emit_reg res.(0)}, {emit_temps args}{emit_handler handler} @caml_frame{emit_value res}\n`
     | Iintop(op) ->
-      emit_intop res arg (fun () -> emit_reg arg.(1)) op
+      emit_intop res arg (fun () -> emit_reg arg.(1)) op handler
     | Iintop_imm(op, n) ->
       let imm = emit_const n in
-      emit_intop res arg (fun () -> emit_temp imm) op
+      emit_intop res arg (fun () -> emit_temp imm) op handler
     | Inegf ->
       `  neg.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iabsf ->
@@ -347,12 +324,11 @@ let emit_linear body =
   let emit_instr arg res = function
     | Lprologue | Lend | Lreloadretaddr | Ladjust_trap_depth _ ->
       ()
-    | Lop(op) ->
-      emit_op arg res op
+    | Lop(op, handler) ->
+      emit_op arg res handler op
     | Lreturn ->
       `  ret {emit_regs arg " " ""}\n`;
     | Llabel(label) ->
-      current_block := label;
       `{emit_label label}:\n`
     | Lbranch(label) ->
       `  jmp {emit_label label}\n`
@@ -421,73 +397,55 @@ let emit_linear body =
       ) labels;
       `\n`
     | Lentertrap ->
-      (*
-      let handler = new_label () in
-      Hashtbl.add traps label handler;
-      let exn_addr = make_temp () in
-      let jmp_frame = make_temp () in
-      let val_addr = make_temp () in
-      `  mov.i64 {emit_temp exn_addr}, {emit_label handler}\n`;
-      `  frame.i64 {emit_temp jmp_frame}, {emit_int (List.length !handlers)}, 0\n`;
-      `  st.8 [{emit_temp jmp_frame}], {emit_temp exn_addr}\n`;
-      `  jmp {emit_label label}\n`;
-      `{emit_label handler}:\n`;
-      `  mov.i64 {emit_temp val_addr}, caml_exn_val\n`;
+      let val_addr = domain_field Domainstate.Domain_exception_value in
       `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}] @caml_value\n`
-      *)
-      failwith "Lsetuptrap"
-    | Lpushtrap { lbl_handler } ->
-      (*
-      let handler =
-        try Some (Hashtbl.find traps !current_block)
-        with Not_found -> None
-      in
-      handlers := handler :: !handlers;
-      let exc_addr = emit_addr "caml_exception_pointer" in
-      let jmp_frame = make_temp () in
-      let sp_frame = make_temp () in
+    | Lpushtrap { lbl_handler; trap_depth } ->
+      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+      let exc_ptr_old_val = make_temp () in
       let exc_frame = make_temp () in
-      let exc_val = make_temp () in
+      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
+      `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
+      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
+
       let sp_val = make_temp () in
-      let obj = List.length !handlers - 1 in
-      `  frame.i64 {emit_temp jmp_frame}, {emit_int obj}, 0\n`;
-      `  frame.i64 {emit_temp sp_frame}, {emit_int obj}, 8\n`;
-      `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
-      `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_addr}]\n`;
-      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_val}\n`;
+      let sp_frame = make_temp () in
       `  mov.i64 {emit_temp sp_val}, $rsp\n`;
+      `  frame.i64 {emit_temp sp_frame}, {emit_int trap_depth}, 8\n`;
       `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
-      `  st.8 [{emit_temp exc_addr}], {emit_temp jmp_frame}\n`
-      *)
-      failwith "Lpushtrap"
-    | Lpoptrap ->
-      (*
-      handlers := List.tl !handlers;
-      let exc_addr = emit_addr "caml_exception_pointer" in
-      let exc_val = make_temp () in
+
+      let jmp_addr = make_temp () in
+      let jmp_frame = make_temp () in
+      `  mov.i64 {emit_temp jmp_addr}, {emit_label lbl_handler}\n`;
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int trap_depth}, 0\n`;
+      `  st.8 [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`
+    | Lpoptrap { trap_depth }->
+      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+      let exc_ptr_old_val = make_temp () in
       let exc_frame = make_temp () in
-      let obj = List.length !handlers in
-      `  frame.i64 {emit_temp exc_frame}, {emit_int obj}, 16\n`;
-      `  ld.8.i64 {emit_temp exc_val}, [{emit_temp exc_frame}]\n`;
-      `  st.8 [{emit_temp exc_addr}], {emit_temp exc_val}\n`
-      *)
-      failwith "Lpoptrap"
-    | Lraise(raise) ->
-      (match raise with
-      | _ when no_handler !handlers ->
-        let exn = emit_addr "caml_raise_exn" in
-        `  call.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`;
-        `  trap\n`;
-      | _ ->
-        let exn = emit_addr "caml_raise_exn" in
-        `  invoke.caml_raise {emit_temp exn}{emit_regs arg ", " ""}{emit_handler !handlers}\n`;
-        `  trap\n`;
+      `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
+      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
+      `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`
+    | Lraise { kind; lbl_handler } ->
+      let exn =
+        match kind with
+        | Lambda.Raise_regular ->
+          emit_addr "caml_raise_regular"
+        | Lambda.Raise_notrace ->
+          emit_addr "caml_raise_notrace"
+        | Lambda.Raise_reraise ->
+          emit_addr "caml_raise_reraise"
+      in
+      (match lbl_handler with
+      | None ->
+        `  tcall.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`
+      | Some h ->
+        `  tinvoke.caml_raise {emit_temp exn}{emit_regs arg ", " ""}, {emit_label h}\n`
       )
   in
   let is_terminator = function
     | Lreturn -> true
-    | Lop (Itailcall_imm _) -> true
-    | Lop (Itailcall_ind _) -> true
+    | Lop (Itailcall_imm _, _) -> true
+    | Lop (Itailcall_ind _, _) -> true
     | Lraise _ -> true
     | _ -> false
   in
@@ -503,37 +461,39 @@ let emit_linear body =
       emit instr.next
   in
 
+  (* Emit argument types and instructions to load them. *)
+  `  .args `;
+  Array.iteri
+    (fun i reg ->
+      if i <> 0 then `, `;
+      `{emit_type reg.Reg.typ}`)
+    f.fun_args;
+  `\n`;
+  Array.iteri
+    (fun i reg ->
+      match reg.typ with
+      | Float ->      `  arg.f64 {emit_reg reg}, {emit_int i}\n`
+      | Val ->        `  arg.i64 {emit_reg reg}, {emit_int i} @caml_value\n`
+      | Addr | Int -> `  arg.i64 {emit_reg reg}, {emit_int i}\n`)
+    f.fun_args;
+
+  (* Find all stack objects. *)
   let rec sizeof_frame n m = function
-    | { desc = Lend } -> m
-    | { desc = Lpushtrap; next } -> sizeof_frame (n + 1) (max (n + 1) m) next
-    | { desc = Lpoptrap; next } -> sizeof_frame (n - 1) m next
-    | { next } -> sizeof_frame n m next
+    | { desc = Lend } ->
+        m
+    | { desc = Lpushtrap _; next } ->
+        sizeof_frame (n + 1) (max (n + 1) m) next
+    | { desc = Lpoptrap _; next } ->
+        sizeof_frame (n - 1) m next
+    | { next } ->
+        sizeof_frame n m next
   in
-
-  let frame_objs = sizeof_frame 0 0 body in
-
-  for i = 0 to frame_objs - 1 do
+  for i = 0 to sizeof_frame 0 0 f.fun_body - 1 do
     `  .stack_object {emit_int i}, 24, 8\n`;
   done;
 
-  find_regs body;
-  let arg_list = List.sort (fun (i1, _, _) (i2, _, _) -> compare i1 i2) (
-      Hashtbl.fold (fun arg (idx, ty) acc -> (idx, arg, ty) :: acc) params []
-  ) in
-  `  .args `;
-  arg_list |> List.iter (fun (i, _, ty) ->
-    if i <> 0 then `, `;
-    `{emit_type ty}`
-  );
-  `\n`;
-  arg_list |> List.iter
-    (fun (idx, arg, ty) -> match ty with
-    | Float ->      `  arg.f64 ${emit_int arg}, {emit_int idx}\n`
-    | Val ->        `  arg.i64 ${emit_int arg}, {emit_int idx} @caml_value\n`
-    | Addr | Int -> `  arg.i64 ${emit_int arg}, {emit_int idx}\n`
-    );
-
-  emit body;
+  (* Emit the body. *)
+  emit f.fun_body;
 
   (* Emit bound error call *)
   !bound_error_labels |> List.iter (fun (handler, label) ->
@@ -546,7 +506,8 @@ let emit_linear body =
     | Some h ->
       `  invoke.caml_raise {emit_temp addr}, {emit_label h} @caml_frame\n`;
       `  trap\n`
-    )
+    );
+  `\n`
 
 let data = function
   | [] ->
@@ -571,17 +532,7 @@ let data = function
     `  .end\n`;
     `\n`
 
-let fundecl f =
-  `  .text\n`;
-  `  .globl {emit_symbol f.fun_name}\n`;
-  `{emit_symbol f.fun_name}:\n`;
-  `  .call\tcaml\n`;
-  emit_linear f.fun_body;
-  `\n`
+let begin_assembly () = ()
 
-let begin_assembly () =
-  ()
-
-let end_assembly () =
-  ()
+let end_assembly () = ()
 

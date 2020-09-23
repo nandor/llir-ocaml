@@ -19,6 +19,7 @@ DOMAIN_STATE(value*, young_limit)
 /* Minor heap limit. See minor_gc.c. */
 
 DOMAIN_STATE(char*, exception_pointer)
+DOMAIN_STATE(char*, exception_value)
 /* Exception pointer that points into the current stack */
 
 DOMAIN_STATE(void*, young_base)

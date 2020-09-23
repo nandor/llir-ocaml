@@ -28,7 +28,7 @@ type instruction =
 and instruction_desc =
   | Lprologue
   | Lend
-  | Lop of Mach.operation
+  | Lop of Mach.operation * label option
   | Lreloadretaddr
   | Lreturn
   | Llabel of label
@@ -38,17 +38,18 @@ and instruction_desc =
   | Lswitch of label array
   | Lentertrap
   | Ladjust_trap_depth of { delta_traps : int; }
-  | Lpushtrap of { lbl_handler : label; }
-  | Lpoptrap
-  | Lraise of Lambda.raise_kind
+  | Lpushtrap of { lbl_handler : label; trap_depth: int }
+  | Lpoptrap of { trap_depth: int }
+  | Lraise of { kind: Lambda.raise_kind; lbl_handler: label option }
 
 let has_fallthrough = function
   | Lreturn | Lbranch _ | Lswitch _ | Lraise _
-  | Lop Itailcall_ind _ | Lop (Itailcall_imm _) -> false
+  | Lop ((Itailcall_ind _ | Itailcall_imm _), _) -> false
   | _ -> true
 
 type fundecl =
   { fun_name: string;
+    fun_args: Reg.t array;
     fun_body: instruction;
     fun_fast: bool;
     fun_dbg : Debuginfo.t;

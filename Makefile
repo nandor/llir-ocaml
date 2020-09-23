@@ -694,28 +694,34 @@ beforedepend:: lambda/runtimedef.ml
 
 # Choose the right machine-dependent files
 
-asmcomp/arch.ml: asmcomp/$(ARCH)/arch.ml
-	cd asmcomp; $(LN) $(ARCH)/arch.ml .
+ifeq "$(LLIR)" "true"
+EMIT_ARCH=llir
+else
+EMIT_ARCH=$(ARCH)
+endif
 
-asmcomp/proc.ml: asmcomp/$(ARCH)/proc.ml
-	cd asmcomp; $(LN) $(ARCH)/proc.ml .
+asmcomp/arch.ml: asmcomp/$(EMIT_ARCH)/arch.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/arch.ml .
 
-asmcomp/selection.ml: asmcomp/$(ARCH)/selection.ml
-	cd asmcomp; $(LN) $(ARCH)/selection.ml .
+asmcomp/proc.ml: asmcomp/$(EMIT_ARCH)/proc.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/proc.ml .
 
-asmcomp/CSE.ml: asmcomp/$(ARCH)/CSE.ml
-	cd asmcomp; $(LN) $(ARCH)/CSE.ml .
+asmcomp/selection.ml: asmcomp/$(EMIT_ARCH)/selection.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/selection.ml .
 
-asmcomp/reload.ml: asmcomp/$(ARCH)/reload.ml
-	cd asmcomp; $(LN) $(ARCH)/reload.ml .
+asmcomp/CSE.ml: asmcomp/$(EMIT_ARCH)/CSE.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/CSE.ml .
 
-asmcomp/scheduling.ml: asmcomp/$(ARCH)/scheduling.ml
-	cd asmcomp; $(LN) $(ARCH)/scheduling.ml .
+asmcomp/reload.ml: asmcomp/$(EMIT_ARCH)/reload.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/reload.ml .
+
+asmcomp/scheduling.ml: asmcomp/$(EMIT_ARCH)/scheduling.ml
+	cd asmcomp; $(LN) $(EMIT_ARCH)/scheduling.ml .
 
 # Preprocess the code emitters
 
-asmcomp/emit.ml: asmcomp/$(ARCH)/emit.mlp tools/cvt_emit
-	echo \# 1 \"$(ARCH)/emit.mlp\" > $@
+asmcomp/emit.ml: asmcomp/$(EMIT_ARCH)/emit.mlp tools/cvt_emit
+	echo \# 1 \"$(EMIT_ARCH)/emit.mlp\" > $@
 	$(CAMLRUN) tools/cvt_emit < $< >> $@ \
 	|| { rm -f $@; exit 2; }
 
@@ -982,7 +988,7 @@ beforedepend:: $(ARCH_SPECIFIC)
 
 .PHONY: check_arch
 check_arch:
-	@echo "========= CHECKING asmcomp/$(ARCH) =============="
+	@echo "========= CHECKING asmcomp/$(EMIT_ARCH) =============="
 	@rm -f $(ARCH_SPECIFIC) asmcomp/emit.ml asmcomp/*.cm*
 	@$(MAKE) compilerlibs/ocamloptcomp.cma \
 	            >/dev/null

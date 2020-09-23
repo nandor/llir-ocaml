@@ -537,7 +537,7 @@ let emit_instr fallthrough i =
         cfi_adjust_cfa_offset n;
       end;
     end
-  | Lop(Imove | Ispill | Ireload) ->
+  | Lop((Imove | Ispill | Ireload), _) ->
       let src = i.arg.(0) and dst = i.res.(0) in
       if src.loc <> dst.loc then
         begin match src.typ, src.loc, dst.loc with
@@ -545,7 +545,7 @@ let emit_instr fallthrough i =
         | Float, _, _ -> I.movsd (reg src) (reg dst)
         | _ -> I.mov (reg src) (reg dst)
         end
-  | Lop(Iconst_int n) ->
+  | Lop(Iconst_int n, _) ->
       if n = 0n then begin
         match i.res.(0).loc with
         | Reg _ ->
@@ -564,7 +564,7 @@ let emit_instr fallthrough i =
           I.mov (nat n) (res i 0)
       end else
         I.mov (nat n) (res i 0)
-  | Lop(Iconst_float f) ->
+  | Lop(Iconst_float f, _) ->
       begin match f with
       | 0x0000_0000_0000_0000L ->       (* +0.0 *)
           I.xorpd (res i 0) (res i 0)
@@ -572,24 +572,24 @@ let emit_instr fallthrough i =
           let lbl = add_float_constant f in
           I.movsd (mem64_rip NONE (emit_label lbl)) (res i 0)
       end
-  | Lop(Iconst_symbol s) ->
+  | Lop(Iconst_symbol s, _) ->
       add_used_symbol s;
       load_symbol_addr s (res i 0)
-  | Lop(Icall_ind { label_after; }) ->
+  | Lop(Icall_ind { label_after; }, _) ->
       I.call (arg i 0);
       record_frame i.live (Dbg_other i.dbg) ~label:label_after
-  | Lop(Icall_imm { func; label_after; }) ->
+  | Lop(Icall_imm { func; label_after; }, _) ->
       add_used_symbol func;
       emit_call func;
       record_frame i.live (Dbg_other i.dbg) ~label:label_after
-  | Lop(Itailcall_ind { label_after; }) ->
+  | Lop(Itailcall_ind { label_after; }, _) ->
       output_epilogue begin fun () ->
         I.jmp (arg i 0);
         if Config.spacetime then begin
           record_frame Reg.Set.empty (Dbg_other i.dbg) ~label:label_after
         end
       end
-  | Lop(Itailcall_imm { func; label_after; }) ->
+  | Lop(Itailcall_imm { func; label_after; }, _) ->
       begin
         if func = !function_name then
           I.jmp (label !tailrec_entry_point)
@@ -603,7 +603,7 @@ let emit_instr fallthrough i =
       if Config.spacetime then begin
         record_frame Reg.Set.empty (Dbg_other i.dbg) ~label:label_after
       end
-  | Lop(Iextcall { func; alloc; label_after; }) ->
+  | Lop(Iextcall { func; alloc; label_after; }, _) ->
       add_used_symbol func;
       if alloc then begin
         load_symbol_addr func rax;
@@ -625,7 +625,7 @@ let emit_instr fallthrough i =
           record_frame Reg.Set.empty (Dbg_other i.dbg) ~label:label_after
         end
       end
-  | Lop(Istackoffset n) ->
+  | Lop(Istackoffset n, _) ->
       if n < 0
       then I.add (int (-n)) rsp
       else if n > 0
@@ -633,7 +633,7 @@ let emit_instr fallthrough i =
       if n <> 0
       then cfi_adjust_cfa_offset n;
       stack_offset := !stack_offset + n
-  | Lop(Iload(chunk, addr)) ->
+  | Lop(Iload(chunk, addr), _) ->
       let dest = res i 0 in
       begin match chunk with
       | Word_int | Word_val ->
@@ -655,7 +655,7 @@ let emit_instr fallthrough i =
       | Double | Double_u ->
           I.movsd (addressing addr REAL8 i 0) dest
       end
-  | Lop(Istore(chunk, addr, _)) ->
+  | Lop(Istore(chunk, addr, _), _) ->
       begin match chunk with
       | Word_int | Word_val ->
           I.mov (arg i 0) (addressing addr QWORD i 1)
@@ -671,7 +671,7 @@ let emit_instr fallthrough i =
       | Double | Double_u ->
           I.movsd (arg i 0) (addressing addr REAL8 i 1)
       end
-  | Lop(Ialloc { bytes = n; label_after_call_gc; spacetime_index; dbginfo }) ->
+  | Lop(Ialloc { bytes = n; label_after_call_gc; spacetime_index; dbginfo }, _) ->
       assert (n <= (Config.max_young_wosize + 1) * Arch.size_addr);
       if !fastcode_flag then begin
         I.sub (int n) r15;
@@ -713,15 +713,15 @@ let emit_instr fallthrough i =
         def_label label;
         I.lea (mem64 NONE 8 R15) (res i 0)
       end
-  | Lop(Iintop(Icomp cmp)) ->
+  | Lop(Iintop(Icomp cmp), _) ->
       I.cmp (arg i 1) (arg i 0);
       I.set (cond cmp) al;
       I.movzx al (res i 0)
-  | Lop(Iintop_imm(Icomp cmp, n)) ->
+  | Lop(Iintop_imm(Icomp cmp, n), _) ->
       I.cmp (int n) (arg i 0);
       I.set (cond cmp) al;
       I.movzx al (res i 0)
-  | Lop(Iintop (Icheckbound { label_after_error; spacetime_index; } )) ->
+  | Lop(Iintop (Icheckbound { label_after_error; spacetime_index; } ), _) ->
       let spacetime =
         if not Config.spacetime then None
         else Some (arg i 2, spacetime_index)
@@ -729,7 +729,7 @@ let emit_instr fallthrough i =
       let lbl = bound_error_label ?label:label_after_error i.dbg ~spacetime in
       I.cmp (arg i 1) (arg i 0);
       I.jbe (label lbl)
-  | Lop(Iintop_imm(Icheckbound { label_after_error; spacetime_index; }, n)) ->
+  | Lop(Iintop_imm(Icheckbound { label_after_error; spacetime_index; }, n), _) ->
       let spacetime =
         if not Config.spacetime then None
         else Some (arg i 1, spacetime_index)
@@ -737,66 +737,66 @@ let emit_instr fallthrough i =
       let lbl = bound_error_label ?label:label_after_error i.dbg ~spacetime in
       I.cmp (int n) (arg i 0);
       I.jbe (label lbl)
-  | Lop(Iintop(Idiv | Imod)) ->
+  | Lop(Iintop(Idiv | Imod), _) ->
       I.cqo ();
       I.idiv (arg i 1)
-  | Lop(Iintop(Ilsl | Ilsr | Iasr as op)) ->
+  | Lop(Iintop(Ilsl | Ilsr | Iasr as op), _) ->
       (* We have i.arg.(0) = i.res.(0) and i.arg.(1) = %rcx *)
       instr_for_intop op cl (res i 0)
-  | Lop(Iintop Imulh) ->
+  | Lop(Iintop Imulh, _) ->
       I.imul (arg i 1) None
-  | Lop(Iintop op) ->
+  | Lop(Iintop op, _) ->
       (* We have i.arg.(0) = i.res.(0) *)
       instr_for_intop op (arg i 1) (res i 0)
-  | Lop(Iintop_imm(Iadd, n)) when i.arg.(0).loc <> i.res.(0).loc ->
+  | Lop(Iintop_imm(Iadd, n), _) when i.arg.(0).loc <> i.res.(0).loc ->
       I.lea (mem64 NONE n (arg64 i 0)) (res i 0)
-  | Lop(Iintop_imm(Iadd, 1) | Iintop_imm(Isub, -1)) ->
+  | Lop((Iintop_imm(Iadd, 1) | Iintop_imm(Isub, -1)), _) ->
       I.inc (res i 0)
-  | Lop(Iintop_imm(Iadd, -1) | Iintop_imm(Isub, 1)) ->
+  | Lop((Iintop_imm(Iadd, -1) | Iintop_imm(Isub, 1)), _) ->
       I.dec (res i 0)
-  | Lop(Iintop_imm(op, n)) ->
+  | Lop(Iintop_imm(op, n), _) ->
       (* We have i.arg.(0) = i.res.(0) *)
       instr_for_intop op (int n) (res i 0)
-  | Lop(Inegf) ->
+  | Lop(Inegf, _) ->
       I.xorpd (mem64_rip OWORD (emit_symbol "caml_negf_mask")) (res i 0)
-  | Lop(Iabsf) ->
+  | Lop(Iabsf, _) ->
       I.andpd (mem64_rip OWORD (emit_symbol "caml_absf_mask")) (res i 0)
-  | Lop(Iaddf | Isubf | Imulf | Idivf as floatop) ->
+  | Lop((Iaddf | Isubf | Imulf | Idivf as floatop), _) ->
       instr_for_floatop floatop (arg i 1) (res i 0)
-  | Lop(Ifloatofint) ->
+  | Lop(Ifloatofint, _) ->
       I.cvtsi2sd  (arg i 0)  (res i 0)
-  | Lop(Iintoffloat) ->
+  | Lop(Iintoffloat, _) ->
       I.cvttsd2si (arg i 0) (res i 0)
-  | Lop(Ispecific(Ilea addr)) ->
+  | Lop(Ispecific(Ilea addr), _) ->
       I.lea (addressing addr NONE i 0) (res i 0)
-  | Lop(Ispecific(Istore_int(n, addr, _))) ->
+  | Lop(Ispecific(Istore_int(n, addr, _)), _) ->
       I.mov (nat n) (addressing addr QWORD i 0)
-  | Lop(Ispecific(Ioffset_loc(n, addr))) ->
+  | Lop(Ispecific(Ioffset_loc(n, addr)), _) ->
       I.add (int n) (addressing addr QWORD i 0)
-  | Lop(Ispecific(Ifloatarithmem(op, addr))) ->
+  | Lop(Ispecific(Ifloatarithmem(op, addr)), _) ->
       instr_for_floatarithmem op (addressing addr REAL8 i 1) (res i 0)
-  | Lop(Ispecific(Ibswap 16)) ->
+  | Lop(Ispecific(Ibswap 16), _) ->
       I.xchg ah al;
       I.movzx (res16 i 0) (res i 0)
-  | Lop(Ispecific(Ibswap 32)) ->
+  | Lop(Ispecific(Ibswap 32), _) ->
       I.bswap (res32 i 0);
       I.movsxd (res32 i 0) (res i 0)
-  | Lop(Ispecific(Ibswap 64)) ->
+  | Lop(Ispecific(Ibswap 64), _) ->
       I.bswap (res i 0)
-  | Lop(Ispecific(Ibswap _)) ->
+  | Lop(Ispecific(Ibswap _), _) ->
       assert false
-  | Lop(Ispecific Isqrtf) ->
+  | Lop(Ispecific Isqrtf, _) ->
       if arg i 0 <> res i 0 then
         I.xorpd (res i 0) (res i 0); (* avoid partial register stall *)
       I.sqrtsd (arg i 0) (res i 0)
-  | Lop(Ispecific(Ifloatsqrtf addr)) ->
+  | Lop(Ispecific(Ifloatsqrtf addr), _) ->
       I.xorpd (res i 0) (res i 0); (* avoid partial register stall *)
       I.sqrtsd (addressing addr REAL8 i 0) (res i 0)
-  | Lop(Ispecific(Isextend32)) ->
+  | Lop(Ispecific(Isextend32), _) ->
       I.movsxd (arg32 i 0) (res i 0)
-  | Lop(Ispecific(Izextend32)) ->
+  | Lop(Ispecific(Izextend32), _) ->
       I.mov (arg32 i 0) (res32 i 0)
-  | Lop (Iname_for_debugger _) -> ()
+  | Lop (Iname_for_debugger _, _) -> ()
   | Lreloadretaddr ->
       ()
   | Lreturn ->
@@ -900,17 +900,17 @@ let emit_instr fallthrough i =
       cfi_adjust_cfa_offset 8;
       I.mov rsp (domain_field Domainstate.Domain_exception_pointer);
       stack_offset := !stack_offset + 16;
-  | Lpoptrap ->
+  | Lpoptrap _ ->
       I.pop (domain_field Domainstate.Domain_exception_pointer);
       cfi_adjust_cfa_offset (-8);
       I.add (int 8) rsp;
       cfi_adjust_cfa_offset (-8);
       stack_offset := !stack_offset - 16
-  | Lraise k ->
+  | Lraise { kind } ->
       (* No Spacetime instrumentation is required for [caml_raise_exn] and
          [caml_reraise_exn].  The only function called that might affect the
          trie is [caml_stash_backtrace], and it does not. *)
-      begin match k with
+      begin match kind with
       | Lambda.Raise_regular ->
           I.mov (int 0) (domain_field Domainstate.Domain_backtrace_pos);
           emit_call "caml_raise_exn";

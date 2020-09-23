@@ -412,10 +412,11 @@ AS_IF([test x"$enable_unix_lib" = "xno" -o x"$enable_str_lib" = "xno"],
 # Override options for LLIR.
 AS_IF([test x"$enable_llir" = "xyes"],
   [llir=true
-   ac_tool_prefix=llir-
+   ac_tool_prefix=llir-${ac_tool_prefix}
    LD=llir-ld
    CC=llir-gcc
-   AS=llir-as],
+   AS=llir-as
+   ASPP=llir-gcc -c],
   [llir=false])
 
 # Initialization of libtool
@@ -1031,9 +1032,11 @@ AS_CASE([$arch],
 
 # Assembler
 
-AS_IF([test -n "$host_alias"],
-  [toolpref="${host_alias}-"],
-  [AS_IF([test x"$enable_llir" = "xyes"], [toolpref="llir-"], [llir=""])])
+AS_IF([test x"$enable_llir" = "xyes"],
+  [toolpref="llir-"],
+  AS_IF([test -n "$host_alias"],
+    [toolpref="${host_alias}-"],
+    []))
 
 # We first compute default values for as and aspp
 # If values have been given by the user then they take precedence over
@@ -1949,9 +1952,5 @@ AS_CASE([$host],
 
 AS_IF([test x"$enable_stdlib_manpages" != "xno"],
   [stdlib_manpages=true],[stdlib_manpages=false])
-
-AS_IF([test x"$enable_llir" = "xyes"],
-  [arch=llir],
-  [])
 
 AC_OUTPUT
