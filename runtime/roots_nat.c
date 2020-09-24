@@ -237,9 +237,6 @@ void caml_unregister_frametable(intnat *table) {
 intnat caml_globals_inited = 0;
 static intnat caml_globals_scanned = 0;
 static link * caml_dyn_globals = NULL;
-#ifdef __llir__
-struct caml_context *caml_callback_link = NULL;
-#endif
 
 void caml_register_dyn_global(void *v) {
   caml_dyn_globals = cons((void*) v,caml_dyn_globals);
@@ -262,7 +259,7 @@ void caml_oldify_local_roots (void)
   struct caml__roots_block *lr;
   link *lnk;
 #ifdef __llir__
-  struct caml_context *current_context = caml_callback_link;
+  struct caml_context *current_context = Caml_state->callback_link;
 #endif
 
   /* The global roots */
@@ -474,7 +471,7 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
   value * root;
   struct caml__roots_block *lr;
 #ifdef __llir__
-  struct caml_context *current_context = caml_callback_link;
+  struct caml_context *current_context = Caml_state->callback_link;
 #endif
   sp = bottom_of_stack;
   retaddr = last_retaddr;

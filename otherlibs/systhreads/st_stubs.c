@@ -216,7 +216,7 @@ Caml_inline void caml_thread_restore_runtime_state(void)
   Caml_state->gc_regs = curr_thread->gc_regs;
   Caml_state->exception_pointer = curr_thread->exception_pointer;
 #ifdef __llir__
-  caml_callback_link = curr_thread->callback_link;
+  Caml_state->callback_link = curr_thread->callback_link;
 #endif
 #ifdef WITH_SPACETIME
   caml_spacetime_trie_node_ptr

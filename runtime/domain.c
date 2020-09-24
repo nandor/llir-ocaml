@@ -86,4 +86,8 @@ void caml_init_domain ()
   Caml_state->eventlog_startup_pid = 0;
   Caml_state->eventlog_startup_timestamp = 0;
   Caml_state->eventlog_out = NULL;
+
+#ifdef __llir__
+  Caml_state->callback_link = NULL;
+#endif
 }

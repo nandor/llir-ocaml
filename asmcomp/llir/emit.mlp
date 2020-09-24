@@ -123,8 +123,10 @@ let fundecl f =
 
   let domain_field f =
     let field = make_temp () in
-    let base = emit_addr "Caml_state" in
+    let base_ptr = emit_addr "Caml_state" in
+    let base = make_temp () in
     let offset = emit_const (Domainstate.idx_of_field f * 8) in
+    `  ld.i64 {emit_temp base}, {emit_temp base_ptr}\n`;
     `  add.i64 {emit_temp field}, {emit_temp base}, {emit_temp offset}\n`;
     field
   in
@@ -140,7 +142,7 @@ let fundecl f =
     | Some h -> `, {emit_label h}`
   in
 
-  let emit_intop res lhs rhs op handler =
+  let emit_intop res lhs rhs dbg op handler =
     let emit inst =
       `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}{emit_value res}\n`
     in
@@ -174,9 +176,9 @@ let fundecl f =
         match List.assoc_opt handler !bound_error_labels with
         | None ->
           let label = new_label () in
-          bound_error_labels := (handler, label) :: !bound_error_labels;
+          bound_error_labels := (handler, (label, dbg)) :: !bound_error_labels;
           label
-        | Some label ->
+        | Some (label, _) ->
           label
       in
       let flag = make_temp () in
@@ -184,7 +186,18 @@ let fundecl f =
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
-  let emit_op arg res handler = function
+  let emit_frame _raise _dbg =
+    `  @caml_frame`
+  in
+
+  let emit_alloc_frame dbginfo =
+    ` @caml_frame:`;
+    dbginfo |> List.iteri (fun i Debuginfo.{ alloc_words } ->
+      if i <> 0 then `,`;
+      `{emit_int alloc_words }`);
+  in
+
+  let emit_op arg res handler dbg = function
     | Imove ->
       `  mov.{emit_type res.(0).typ} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
     | Ispill  -> assert false
@@ -197,18 +210,18 @@ let fundecl f =
       `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}{emit_value res}\n`;
     | Icall_ind _ ->
       let types = call_types res in
-      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler handler} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
     | Icall_imm { func } ->
       let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler handler} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
     | Itailcall_ind(_) ->
-      `  tcall.i64.caml {emit_regs arg " " ""} @caml_frame\n`
+      `  tcall.i64.caml {emit_regs arg " " ""} {emit_frame false dbg}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""} @caml_frame\n`
+      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
     | Iextcall { func; alloc } ->
       let res_types = call_types res in
       let addr = make_temp () in
@@ -286,19 +299,21 @@ let fundecl f =
         `  add.i64 {emit_temp addr}, {emit_reg arg.(1)}, {emit_temp imm}\n`;
         `  st [{emit_temp addr}], {ext ()}\n`
       );
-    | Ialloc { bytes } ->
+    | Ialloc { bytes; dbginfo } ->
       let args = match bytes with
         | 16 -> [emit_addr "caml_alloc1"]
         | 24 -> [emit_addr "caml_alloc2"]
         | 32 -> [emit_addr "caml_alloc3"]
         | _  -> [emit_addr "caml_allocN"; emit_const bytes]
       in
-      `  {emit_call handler}.i64.caml_alloc {emit_reg res.(0)}, {emit_temps args}{emit_handler handler} @caml_frame{emit_value res}\n`
+      `  {emit_call handler}.i64.caml_alloc`;
+      ` {emit_reg res.(0)}, {emit_temps args}{emit_handler handler}`;
+      ` {emit_alloc_frame dbginfo} {emit_value res}\n`
     | Iintop(op) ->
-      emit_intop res arg (fun () -> emit_reg arg.(1)) op handler
+      emit_intop res arg (fun () -> emit_reg arg.(1)) dbg op handler
     | Iintop_imm(op, n) ->
       let imm = emit_const n in
-      emit_intop res arg (fun () -> emit_temp imm) op handler
+      emit_intop res arg (fun () -> emit_temp imm) dbg op handler
     | Inegf ->
       `  neg.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iabsf ->
@@ -321,11 +336,11 @@ let fundecl f =
       assert false
   in
 
-  let emit_instr arg res = function
+  let emit_instr arg res dbg = function
     | Lprologue | Lend | Lreloadretaddr | Ladjust_trap_depth _ ->
       ()
     | Lop(op, handler) ->
-      emit_op arg res handler op
+      emit_op arg res handler dbg op
     | Lreturn ->
       `  ret {emit_regs arg " " ""}\n`;
     | Llabel(label) ->
@@ -400,12 +415,11 @@ let fundecl f =
       let val_addr = domain_field Domainstate.Domain_exception_value in
       `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}] @caml_value\n`
     | Lpushtrap { lbl_handler; trap_depth } ->
-      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-      let exc_ptr_old_val = make_temp () in
-      let exc_frame = make_temp () in
-      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
-      `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
-      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
+      let jmp_addr = make_temp () in
+      let jmp_frame = make_temp () in
+      `  mov.i64 {emit_temp jmp_addr}, {emit_label lbl_handler}\n`;
+      `  frame.i64 {emit_temp jmp_frame}, {emit_int trap_depth}, 0\n`;
+      `  st.8 [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`;
 
       let sp_val = make_temp () in
       let sp_frame = make_temp () in
@@ -413,11 +427,13 @@ let fundecl f =
       `  frame.i64 {emit_temp sp_frame}, {emit_int trap_depth}, 8\n`;
       `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
 
-      let jmp_addr = make_temp () in
-      let jmp_frame = make_temp () in
-      `  mov.i64 {emit_temp jmp_addr}, {emit_label lbl_handler}\n`;
-      `  frame.i64 {emit_temp jmp_frame}, {emit_int trap_depth}, 0\n`;
-      `  st.8 [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`
+      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+      let exc_ptr_old_val = make_temp () in
+      let exc_frame = make_temp () in
+      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
+      `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
+      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
+      `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp jmp_frame}\n`
     | Lpoptrap { trap_depth }->
       let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
       let exc_ptr_old_val = make_temp () in
@@ -426,21 +442,45 @@ let fundecl f =
       `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
       `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`
     | Lraise { kind; lbl_handler } ->
-      let exn =
-        match kind with
-        | Lambda.Raise_regular ->
-          emit_addr "caml_raise_regular"
-        | Lambda.Raise_notrace ->
-          emit_addr "caml_raise_notrace"
-        | Lambda.Raise_reraise ->
-          emit_addr "caml_raise_reraise"
+      let emit_call () =
+        let fn = emit_addr "caml_raise_exn" in
+        match lbl_handler with
+        | None ->
+          `  call.caml_raise {emit_temp fn}{emit_regs arg ", " ""} {emit_frame true dbg}\n`;
+          `  trap\n`
+        | Some h ->
+          `  invoke.caml_raise {emit_temp fn}{emit_regs arg ", " ""}, {emit_label h} {emit_frame true dbg}\n`;
+          `  trap\n`
       in
-      (match lbl_handler with
-      | None ->
-        `  tcall.caml_raise {emit_temp exn}{emit_regs arg ", " ""}\n`
-      | Some h ->
-        `  tinvoke.caml_raise {emit_temp exn}{emit_regs arg ", " ""}, {emit_label h}\n`
-      )
+      begin match kind with
+      | Lambda.Raise_regular ->
+        let pos_addr = domain_field Domainstate.Domain_backtrace_pos in
+        let zero = emit_const 0 in
+        `  st [{emit_temp pos_addr}], {emit_temp zero}\n`;
+        emit_call ()
+      | Lambda.Raise_reraise ->
+        emit_call ()
+      | Lambda.Raise_notrace ->
+        let val_addr = domain_field Domainstate.Domain_exception_value in
+        `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
+        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+        let frame_addr = make_temp () in
+        `  ld.i64 {emit_temp frame_addr}, [{emit_temp exc_ptr_addr}]\n`;
+        let off = emit_const 8 in
+        let addr = make_temp () in
+        `  ld.i64 {emit_temp addr}, [{emit_temp frame_addr}]\n`;
+        let addr8 = make_temp () in
+        `  add.i64 {emit_temp addr8}, {emit_temp frame_addr}, {emit_temp off}\n`;
+        let addr16 = make_temp () in
+        `  add.i64 {emit_temp addr16}, {emit_temp addr8}, {emit_temp off}\n`;
+        let sp_val = make_temp () in
+        `  ld.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
+        let frame_val = make_temp () in
+        `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
+        `  set.i64 $rsp, {emit_temp sp_val}\n`;
+        `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
+        `  ji {emit_temp addr}\n`
+      end
   in
   let is_terminator = function
     | Lreturn -> true
@@ -449,15 +489,16 @@ let fundecl f =
     | Lraise _ -> true
     | _ -> false
   in
-  let rec emit = function
+  let rec emit i =
+    match i with
     | { desc = Lend } ->
       ()
-    | { arg; res; desc; next = { desc = Lend } } when not (is_terminator desc) ->
-        emit_instr arg res desc;
+    | { next = { desc = Lend } } when not (is_terminator i.desc) ->
+        emit_instr i.arg i.res i.dbg i.desc;
         `  mov.i64 $5000, 1\n`;
         `  ret     $5000\n`
     | instr ->
-      emit_instr instr.arg instr.res instr.desc;
+      emit_instr instr.arg instr.res i.dbg instr.desc;
       emit instr.next
   in
 
@@ -496,7 +537,7 @@ let fundecl f =
   emit f.fun_body;
 
   (* Emit bound error call *)
-  !bound_error_labels |> List.iter (fun (handler, label) ->
+  !bound_error_labels |> List.iter (fun (handler, (label, dbg)) ->
     `{emit_label label}:\n`;
     let addr = emit_addr "caml_array_bound_error" in
     match handler with
@@ -504,7 +545,7 @@ let fundecl f =
       `  call.caml_raise {emit_temp addr}\n`;
       `  trap\n`
     | Some h ->
-      `  invoke.caml_raise {emit_temp addr}, {emit_label h} @caml_frame\n`;
+      `  invoke.caml_raise {emit_temp addr}, {emit_label h} {emit_frame true dbg}\n`;
       `  trap\n`
     );
   `\n`

@@ -36,7 +36,7 @@ frame_descr * caml_next_frame_descriptor(uintnat * pc, char ** sp)
   frame_descr * d;
   uintnat h;
 #ifdef __llir__
-  struct caml_context *current_context = caml_callback_link;
+  struct caml_context *current_context = Caml_state->callback_link;
 #endif
 
   while (1) {
