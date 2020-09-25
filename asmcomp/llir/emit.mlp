@@ -65,7 +65,7 @@ let fundecl f =
       | Isigned   Cge -> "ge"
       | Iunsigned Ceq -> "eq"
       | Iunsigned Cne -> "ne"
-      | Iunsigned Clt -> "uls"
+      | Iunsigned Clt -> "ult"
       | Iunsigned Cgt -> "ugt"
       | Iunsigned Cle -> "ule"
       | Iunsigned Cge -> "uge"
@@ -522,7 +522,11 @@ let fundecl f =
         `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
         `  set.i64 $rsp, {emit_temp sp_val}\n`;
         `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
-        `  ji {emit_temp addr}\n`
+        (match lbl_handler with
+        | None ->
+          `  ji {emit_temp addr}\n`
+        | Some h ->
+          `  jmp {emit_label h}\n`)
       end
   in
   let is_terminator = function
@@ -585,10 +589,10 @@ let fundecl f =
     let addr = emit_addr "caml_array_bound_error" in
     match handler with
     | None   ->
-      `  call.caml_raise {emit_temp addr}\n`;
+      `  call.c {emit_temp addr} {emit_frame true dbg}\n`;
       `  trap\n`
     | Some h ->
-      `  invoke.caml_raise {emit_temp addr}, {emit_label h} {emit_frame true dbg}\n`;
+      `  invoke.c {emit_temp addr}, {emit_label h} {emit_frame true dbg}\n`;
       `  trap\n`
     );
   `\n`

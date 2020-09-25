@@ -17,6 +17,8 @@
 
 let arch = "@@ARCH@@"
 
+let llir = @@LLIR@@
+
 let afl_instrument = @@AFL_INSTRUMENT@@
 
 let asm = "@@ASM@@"

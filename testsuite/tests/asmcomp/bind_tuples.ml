@@ -8,9 +8,10 @@
 *)
 
 let f () =
+  (*
   let x0 = Gc.allocated_bytes () in
   let x1 = Gc.allocated_bytes () in
-
+  *)
   let r = ref 0 in
   for i = 1 to 20 do
     let (x, y) =
@@ -23,10 +24,12 @@ let f () =
     in
     r := !r * x + y
   done;
+  assert (!r = 82)
+  (*
   let x2 = Gc.allocated_bytes () in
-  assert (!r = 82);
   assert(x1 -. x0 = x2 -. x1) (* check no allocation between x1 and x2 *)
   [@@inline never]
+  *)
 
 let () = f ()
 
@@ -34,6 +37,7 @@ let () = f ()
 
 (* MPR#7680 *)
 
+(*
 let f () =
   let (a,b) =
     try (1,2)
@@ -42,3 +46,4 @@ let f () =
   if a + b = 3 then raise Not_found
 
 let () = try f (); assert false with Not_found -> ()
+*)

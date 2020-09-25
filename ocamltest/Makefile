@@ -233,6 +233,7 @@ ocamltest_config.ml: ocamltest_config.ml.in Makefile ../Makefile.config
 	  -e 's|@@AFL_INSTRUMENT@@|$(AFL_INSTRUMENT)|' \
 	  -e 's|@@RUNTIMEI@@|$(RUNTIMEI)|' \
 	  -e 's|@@ARCH@@|$(ARCH)|' \
+    -e 's|@@LLIR@@|$(LLIR)|' \
 	  -e 's|@@SHARED_LIBRARIES@@|$(SUPPORTS_SHARED_LIBRARIES)|' \
 	  -e 's|@@UNIX@@|$(unix)|' \
 	  -e 's|@@SYSTHREADS@@|$(systhreads)|' \

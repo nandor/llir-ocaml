@@ -83,7 +83,10 @@ let codegen ocamlsrcdir =
   Filename.make_path [ocamlsrcdir; "testsuite"; "tools"; "codegen"]
 
 let asmgen_archmod ocamlsrcdir =
+  let arch =
+    if Ocamltest_config.llir then "llir" else Ocamltest_config.arch
+  in
   let objname =
-    "asmgen_" ^ Ocamltest_config.arch ^ "." ^ Ocamltest_config.objext
+    "asmgen_" ^ arch ^ "." ^ Ocamltest_config.objext
   in
   Filename.make_path [ocamlsrcdir; "testsuite"; "tools"; objname]

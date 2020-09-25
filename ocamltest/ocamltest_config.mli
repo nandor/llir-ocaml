@@ -18,6 +18,9 @@
 val arch : string
 (** Architecture for the native compiler, "none" if it is disabled *)
 
+val llir : bool
+(** Whether LLIR is enabled *)
+
 val afl_instrument : bool
 (** Whether AFL support has been enabled in the compiler *)
 

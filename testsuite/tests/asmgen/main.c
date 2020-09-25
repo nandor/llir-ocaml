@@ -18,7 +18,11 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef __llir__
+void caml_array_bound_error(void)
+#else
 void caml_ml_array_bound_error(void)
+#endif
 {
   fprintf(stderr, "Fatal error: out-of-bound access in array or string\n");
   exit(2);

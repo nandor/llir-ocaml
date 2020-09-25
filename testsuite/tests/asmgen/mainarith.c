@@ -22,7 +22,11 @@
 #include <caml/config.h>
 #define FMT ARCH_INTNAT_PRINTF_FORMAT
 
+#ifdef __llir__
+void caml_array_bound_error(void)
+#else
 void caml_ml_array_bound_error(void)
+#endif
 {
   fprintf(stderr, "Fatal error: out-of-bound access in array or string\n");
   exit(2);
