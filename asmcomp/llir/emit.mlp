@@ -199,8 +199,8 @@ let fundecl f =
     in
     let emit_debug d =
       let defname = Scoped_location.string_of_scopes d.dinfo_scopes in
-      emit_printf "0x%Lx" (pack_info d);
-      emit_string_literal d.dinfo_file;
+      emit_printf "0x%Lx " (pack_info d);
+      `{emit_string_literal d.dinfo_file} `;
       emit_string_literal defname;
     in
     List.iter (fun dbg -> `({emit_debug dbg})`) dbgs;
@@ -212,7 +212,7 @@ let fundecl f =
       `  @caml_frame`
     | dbgs ->
       let kind = if raises then 1 else 0 in
-      `  @caml_frame(() {emit_int kind} ({encode_dbgs kind dbgs}))`
+      `  @caml_frame(() {emit_int kind} (({encode_dbgs kind dbgs})))`
   in
 
   let emit_alloc_frame dbg =
@@ -346,9 +346,12 @@ let fundecl f =
         | 32 -> [emit_addr "caml_alloc3"]
         | _  -> [emit_addr "caml_allocN"; emit_const bytes]
       in
-      `  {emit_call handler}.i64.caml_alloc`;
-      ` {emit_reg res.(0)}, {emit_temps args}{emit_handler handler}`;
-      ` {emit_alloc_frame dbginfo} {emit_value res}\n`
+      let young_ptr = make_temp () in
+      ` {emit_call handler}.i64.caml_alloc`;
+      ` {emit_temp young_ptr}, {emit_temps args}{emit_handler handler}`;
+      ` {emit_alloc_frame dbginfo}\n`;
+      let offset = emit_const 8 in
+      ` add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp offset} {emit_value res}\n`
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) dbg op handler
     | Iintop_imm(op, n) ->

@@ -44,10 +44,14 @@ tools := $(expect_PROG)
 
 ifeq "$(NATIVE_COMPILER)" "true"
 tools += $(codegen_PROG)
+ifeq "$(LLIR)" "true"
+tools += asmgen_llir.$(O)
+else
 ifneq "$(CCOMPTYPE)-$(ARCH)" "msvc-amd64"
 # The asmgen tests are not ported to MSVC64 yet
 # so do not compile any arch-specific module
 tools += asmgen_$(ARCH).$(O)
+endif
 endif
 endif
 

@@ -164,7 +164,7 @@ static void init_frame_descriptors(link *new_frametables)
 
 void caml_init_frame_descriptors(void) {
 #ifdef __llir__
-  link *new_frametables = cons(caml_llir_frametable, NULL);
+  link *new_frametables = cons(&caml_llir_frametable, NULL);
 #else
   intnat i;
   link *new_frametables = NULL;

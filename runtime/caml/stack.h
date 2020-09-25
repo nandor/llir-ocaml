@@ -140,7 +140,7 @@ extern value * caml_globals[];
 extern char caml_globals_map[];
 extern intnat caml_globals_inited;
 #ifdef __llir__
-extern intnat * caml_llir_frametable;
+extern frame_descr caml_llir_frametable[];
 #else
 extern intnat * caml_frametable[];
 #endif
