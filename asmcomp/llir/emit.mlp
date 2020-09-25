@@ -186,16 +186,12 @@ let fundecl f =
       `  jt {emit_temp flag}, {emit_label label}\n`
   in
 
-  let encode_dbgs raises dbgs =
+  let encode_dbgs kind dbgs =
     let open Debuginfo in
-    `(`;
-    if raises then `1` else `0`;
-    ` (`;
     let pack_info d =
       let line = min 0xFFFFF d.dinfo_line in
       let char_start = min 0xFF d.dinfo_char_start in
       let char_end = min 0x3FF d.dinfo_char_end in
-      let kind = if raises then 1 else 0 in
       Int64.(add (shift_left (of_int line) 44)
                (add (shift_left (of_int char_start) 36)
                   (add (shift_left (of_int char_end) 26)
@@ -203,25 +199,42 @@ let fundecl f =
     in
     let emit_debug d =
       let defname = Scoped_location.string_of_scopes d.dinfo_scopes in
-      `({emit_printf "0x%Lx" (pack_info d)} \"{emit_string d.dinfo_file}\" \"{emit_string defname}\")`
+      emit_printf "0x%Lx" (pack_info d);
+      emit_string_literal d.dinfo_file;
+      emit_string_literal defname;
     in
-    List.iter (fun dbg -> `{emit_debug dbg}`) dbgs;
-    `))`
+    List.iter (fun dbg -> `({emit_debug dbg})`) dbgs;
   in
 
   let emit_frame raises dbg =
     match dbg with
-    | []   -> `  @caml_frame`
-    | dbgs -> `  @caml_frame({encode_dbgs raises dbgs})`
+    | []   ->
+      `  @caml_frame`
+    | dbgs ->
+      let kind = if raises then 1 else 0 in
+      `  @caml_frame(() {emit_int kind} ({encode_dbgs kind dbgs}))`
   in
 
-  let emit_alloc_frame dbginfo =
-    ` @caml_alloc(`;
-    dbginfo |> List.iter (fun Debuginfo.{ alloc_words; alloc_dbg } ->
-      match alloc_dbg with
-      | [] -> `{emit_int alloc_words}`
-      | dbgs -> `({emit_int alloc_words} {encode_dbgs false dbgs})`);
-    `)`;
+  let emit_alloc_frame dbg =
+    let has_debug =
+      List.exists
+        (fun Debuginfo.{ alloc_dbg } -> not (Debuginfo.is_none alloc_dbg))
+        dbg
+    in
+    ` @caml_frame((`;
+    List.iter (fun Debuginfo.{ alloc_words } -> `{emit_int alloc_words} `) dbg;
+    `) 0 (`;
+    if has_debug then begin
+      List.iter
+        (fun Debuginfo.{ alloc_dbg } ->
+          match alloc_dbg with
+          | [] -> `()`
+          | dbgs -> `({encode_dbgs 0 dbgs})`)
+        dbg;
+    end else begin
+      `()`
+    end;
+    `))`;
   in
 
   let emit_op arg res handler dbg = function

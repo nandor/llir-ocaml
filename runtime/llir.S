@@ -292,7 +292,7 @@ caml_start_program_helper:
   arg.i64           $92, 3            # Arg 1
   arg.i64           $93, 4            # Arg 2
   arg.i64           $94, 5            # Arg 3
-  invoke.i64.caml   $80, $90, $91, $92, $93, $94, .Lhandler_impl @caml_root
+  invoke.i64.caml   $80, $90, $91, $92, $93, $94, .Lhandler_impl @caml_frame
 
 .Lreturn_impl:
   phi.i64           $300, .Lentry_impl, $80, .Lhandler_impl, $203
