@@ -1,11 +1,14 @@
 (* TEST
 
-* hassysthreads
+* not-llir
+** hassysthreads
 include systhreads
-** bytecode
-** native
+*** bytecode
+*** native
 
 *)
+
+(* Test disabled for unknown reasons *)
 
 (* Torture test - I/O interspersed with lots of GC *)
 
