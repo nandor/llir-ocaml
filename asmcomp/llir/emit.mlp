@@ -265,9 +265,9 @@ let fundecl f =
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       if alloc then begin
-        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler}  @caml_frame{emit_value res}\n`
+        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
       end else begin
-        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler}{emit_value res}\n`
+        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
       end
     | Istackoffset(_) ->
       assert false
