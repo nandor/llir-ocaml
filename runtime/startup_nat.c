@@ -57,6 +57,7 @@ static void init_static(void)
 {
 #ifdef __llir__
   extern char *caml_data_begin, *caml_data_end;
+  extern char caml_code_begin, caml_code_end;
 #else
   extern struct segment caml_data_segments[], caml_code_segments[];
   int i;
@@ -72,6 +73,9 @@ static void init_static(void)
                           caml_data_begin,
                           caml_data_end + sizeof(value)) != 0)
     caml_fatal_error("Fatal error: not enough memory for initial page table");
+
+  caml_code_area_start = &caml_code_begin;
+  caml_code_area_end = &caml_code_end;
 #else
   for (i = 0; caml_data_segments[i].begin != 0; i++) {
     if (caml_page_table_add(In_static_data,
