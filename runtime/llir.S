@@ -92,7 +92,7 @@ caml_callback3_asm:
   ld.i64            $22, [$99]         # Arg 2
 
   mov.i64           $30, caml_start_program_helper
-  mov.i64           $10, caml_apply2
+  mov.i64           $10, caml_apply3
   tcall.i64.c       $30, $0, $10, $20, $21, $22, $1
 
 ################################################################################
