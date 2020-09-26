@@ -272,27 +272,26 @@ let fundecl f =
     | Istackoffset(_) ->
       assert false
     | Iload(size, addr) ->
-      let extension ty kind =
+      let extension from dst kind =
         let ext = make_temp () in
-        ( ty
+        ( from
         , (fun () ->
           emit_temp ext)
         , (fun () ->
-          ` {emit_string kind}.i64 {emit_reg res.(0)}, {emit_temp ext}\n`)
+          ` {emit_string kind}.{emit_string dst} {emit_reg res.(0)}, {emit_temp ext}\n`)
         )
       in
       let load_ty, temp, extend = match size with
-        | Byte_unsigned       -> extension "i8"  "zext"
-        | Byte_signed         -> extension "i8"  "sext"
-        | Sixteen_unsigned    -> extension "i16" "zext"
-        | Sixteen_signed      -> extension "i16" "sext"
-        | Thirtytwo_unsigned  -> extension "i32" "zext"
-        | Thirtytwo_signed    -> extension "i32" "sext"
+        | Byte_unsigned       -> extension "i8"  "i64" "zext"
+        | Byte_signed         -> extension "i8"  "i64" "sext"
+        | Sixteen_unsigned    -> extension "i16" "i64" "zext"
+        | Sixteen_signed      -> extension "i16" "i64" "sext"
+        | Thirtytwo_unsigned  -> extension "i32" "i64" "zext"
+        | Thirtytwo_signed    -> extension "i32" "i64" "sext"
+        | Single              -> extension "f32" "f64" "fext"
         | Word_int
         | Word_val ->
           ( "i64", (fun () -> emit_reg res.(0)), (fun () -> ()))
-        | Single ->
-          ( "f32", (fun () -> emit_reg res.(0)), (fun () -> ()))
         | Double
         | Double_u ->
           ( "f64", (fun () -> emit_reg res.(0)), (fun () -> ()))
@@ -321,9 +320,9 @@ let fundecl f =
         | Sixteen_signed      -> truncate "i16"
         | Thirtytwo_unsigned  -> truncate "i32"
         | Thirtytwo_signed    -> truncate "i32"
+        | Single              -> truncate "f32"
         | Word_int
         | Word_val
-        | Single
         | Double
         | Double_u ->
           (fun () -> emit_reg arg.(0))
