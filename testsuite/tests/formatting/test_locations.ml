@@ -1,41 +1,43 @@
 (* TEST
 compile_only="true"
 
-* setup-ocamlc.byte-build-env
-** ocamlc.byte
+* not-llir
+
+** setup-ocamlc.byte-build-env
+*** ocamlc.byte
 flags="-g -dno-locations -dsource -dparsetree -dtypedtree -dlambda"
-*** check-ocamlc.byte-output
+**** check-ocamlc.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dno-locations.ocamlc.reference"
 
-* setup-ocamlopt.byte-build-env
-** ocamlopt.byte
+** setup-ocamlopt.byte-build-env
+*** ocamlopt.byte
 flags="-g -dno-locations -dcmm"
-*** no-flambda
-**** check-ocamlopt.byte-output
+**** no-flambda
+***** check-ocamlopt.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dno-locations.ocamlopt.clambda.reference"
-*** flambda
-**** check-ocamlc.byte-output
+**** flambda
+***** check-ocamlc.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dno-locations.ocamlopt.flambda.reference"
 
-* setup-ocamlc.byte-build-env
-** ocamlc.byte
+** setup-ocamlc.byte-build-env
+*** ocamlc.byte
 flags="-g -dlocations -dsource -dparsetree -dtypedtree -dlambda"
-*** check-ocamlc.byte-output
+**** check-ocamlc.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dlocations.ocamlc.reference"
 
-* setup-ocamlopt.byte-build-env
-** ocamlopt.byte
+** setup-ocamlopt.byte-build-env
+*** ocamlopt.byte
 flags="-g -dlocations -dcmm"
-*** no-flambda
-**** check-ocamlopt.byte-output
+**** no-flambda
+***** check-ocamlopt.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dlocations.ocamlopt.clambda.reference"
-*** flambda
-**** check-ocamlc.byte-output
+**** flambda
+***** check-ocamlc.byte-output
 compiler_reference =
   "${test_source_directory}/test_locations.dlocations.ocamlopt.flambda.reference"
 *)

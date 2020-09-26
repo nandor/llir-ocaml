@@ -1,17 +1,18 @@
 (* TEST
-* function_sections
+* not-llir
+** function_sections
 flags = "-S -function-sections"
-** arch_arm
-*** native
+*** arch_arm
+**** native
 reference = "${test_source_directory}/func_sections.arm.reference"
-** arch_arm64
-*** native
+*** arch_arm64
+**** native
 reference = "${test_source_directory}/func_sections.arm.reference"
-** arch_amd64
-*** native
+*** arch_amd64
+**** native
 reference = "${test_source_directory}/func_sections.reference"
-** arch_i386
-*** native
+*** arch_i386
+**** native
 reference = "${test_source_directory}/func_sections.reference"
 *)
 

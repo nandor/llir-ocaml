@@ -114,6 +114,18 @@ let not_windows = make
     "not running on Windows"
     "running on Windows")
 
+let llir = make
+  "llir"
+  (Actions_helpers.pass_or_skip (Ocamltest_config.llir)
+    "emitting llir"
+    "not emitting llir")
+
+let not_llir = make
+  "not-llir"
+  (Actions_helpers.pass_or_skip (not Ocamltest_config.llir)
+    "emitting llir"
+    "not emitting llir")
+
 let is_bsd_system s =
   match s with
   | "bsd_elf" | "netbsd" | "freebsd" | "openbsd" -> true
@@ -256,5 +268,7 @@ let _ =
     arch_amd64;
     arch_i386;
     arch_power;
+    llir;
+    not_llir;
     function_sections;
   ]
