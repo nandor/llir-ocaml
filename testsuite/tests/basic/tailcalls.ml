@@ -1,4 +1,6 @@
-(* TEST *)
+(* TEST
+*not-llir
+*)
 
 let rec tailcall4 a b c d =
   if a < 0
@@ -19,6 +21,7 @@ let rec tailcall16 a b c d e f g h i j k l m n o p =
 let indtailcall8 fn a b c d e f g h =
   fn a b c d e f g h
 
+(* Disabled on LLIR since some tail calls are not guaranteed. *)
 let indtailcall16 fn a b c d e f g h i j k l m n o p =
   fn a b c d e f g h i j k l m n o p
 

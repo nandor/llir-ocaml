@@ -2,9 +2,10 @@
 flags = "-dlive"
 files = "main.c"
 arguments = "-DUNIT_INT -DFUN=catch_rec_deadhandler main.c"
-* asmgen
-** run
-*** check-program-output
+* not-llir
+** asmgen
+*** run
+**** check-program-output
 *)
 
 (function "catch_rec_deadhandler" ()

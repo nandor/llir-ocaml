@@ -35,15 +35,15 @@ CAMLexport int caml_debugger_fork_mode = 1; /* parent by default */
 
 #if !defined(HAS_SOCKETS) || defined(NATIVE_CODE)
 
-void caml_debugger_init(void)
+CAMLexport void caml_debugger_init(void)
 {
 }
 
-void caml_debugger(enum event_kind event, value param)
+CAMLexport void caml_debugger(enum event_kind event, value param)
 {
 }
 
-void caml_debugger_cleanup_fork(void)
+CAMLexport void caml_debugger_cleanup_fork(void)
 {
 }
 
@@ -169,7 +169,7 @@ static void winsock_cleanup(void)
 }
 #endif
 
-void caml_debugger_init(void)
+CAMLexport void caml_debugger_init(void)
 {
   char * address;
   char_os * a;
@@ -380,7 +380,7 @@ void caml_debugger_code_unloaded(int index)
 #define Extra_args(sp) (Long_val(((sp)[2])))
 #define Locals(sp) ((sp) + 3)
 
-void caml_debugger(enum event_kind event, value param)
+CAMLexport void caml_debugger(enum event_kind event, value param)
 {
   value *frame, *newframe;
   intnat i, pos;
@@ -588,7 +588,7 @@ void caml_debugger(enum event_kind event, value param)
   }
 }
 
-void caml_debugger_cleanup_fork(void)
+CAMLexport void caml_debugger_cleanup_fork(void)
 {
   /* We could remove all of the breakpoints, but closing the connection
    * means that they'll just be skipped anyway. */

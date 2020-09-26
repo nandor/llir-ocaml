@@ -1,10 +1,13 @@
 (* TEST
+ *not-llir
    include testing
 *)
 
 (*
 
 A test file for the Printf module.
+
+Disabled on LLIR since the __entry method takes too long to compile.
 
 *)
 
