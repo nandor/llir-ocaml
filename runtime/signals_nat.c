@@ -200,7 +200,7 @@ DECLARE_SIGNAL_HANDLER(trap_handler)
 
 /* Machine- and OS-dependent handling of stack overflow */
 
-#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
+#if defined(HAS_STACK_OVERFLOW_DETECTION)
 #ifndef CONTEXT_SP
 #error "CONTEXT_SP is required if HAS_STACK_OVERFLOW_DETECTION is defined"
 #endif
@@ -291,7 +291,7 @@ void caml_init_signals(void)
   }
 #endif
 
-#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
+#if defined(HAS_STACK_OVERFLOW_DETECTION)
   {
     stack_t stk;
     struct sigaction act;
@@ -308,7 +308,7 @@ void caml_init_signals(void)
 
 void caml_setup_stack_overflow_detection(void)
 {
-#if defined(HAS_STACK_OVERFLOW_DETECTION) && !defined(__llir__)
+#if defined(HAS_STACK_OVERFLOW_DETECTION)
   stack_t stk;
   stk.ss_sp = malloc(SIGSTKSZ);
   stk.ss_size = SIGSTKSZ;
