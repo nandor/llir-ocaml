@@ -212,7 +212,7 @@ let fundecl f =
       `  @caml_frame`
     | dbgs ->
       let kind = if raises then 1 else 0 in
-      `  @caml_frame(() {emit_int kind} (({encode_dbgs kind dbgs})))`
+      `  @caml_frame(() (({encode_dbgs kind dbgs})))`
   in
 
   let emit_alloc_frame dbg =
@@ -223,7 +223,7 @@ let fundecl f =
     in
     ` @caml_frame((`;
     List.iter (fun Debuginfo.{ alloc_words } -> `{emit_int alloc_words} `) dbg;
-    `) 0 (`;
+    `) (`;
     if has_debug then begin
       List.iter
         (fun Debuginfo.{ alloc_dbg } ->
@@ -231,8 +231,6 @@ let fundecl f =
           | [] -> `()`
           | dbgs -> `({encode_dbgs 0 dbgs})`)
         dbg;
-    end else begin
-      `()`
     end;
     `))`;
   in
@@ -589,10 +587,10 @@ let fundecl f =
     let addr = emit_addr "caml_array_bound_error" in
     match handler with
     | None   ->
-      `  call.c {emit_temp addr} {emit_frame true dbg}\n`;
+      `  call.c {emit_temp addr} {emit_frame false dbg}\n`;
       `  trap\n`
     | Some h ->
-      `  invoke.c {emit_temp addr}, {emit_label h} {emit_frame true dbg}\n`;
+      `  invoke.c {emit_temp addr}, {emit_label h} {emit_frame false dbg}\n`;
       `  trap\n`
     );
   `\n`
