@@ -435,9 +435,16 @@ void caml_do_roots (scanning_action f, int do_globals)
   CAML_EV_END(EV_MAJOR_ROOTS_DYNAMIC_GLOBAL);
   /* The stack and local roots */
   CAML_EV_BEGIN(EV_MAJOR_ROOTS_LOCAL);
+#ifdef __llir__
+  caml_do_local_roots(f, Caml_state->bottom_of_stack,
+                      Caml_state->last_return_address, Caml_state->gc_regs,
+                      Caml_state->local_roots,
+                      Caml_state->callback_link);
+#else
   caml_do_local_roots(f, Caml_state->bottom_of_stack,
                       Caml_state->last_return_address, Caml_state->gc_regs,
                       Caml_state->local_roots);
+#endif
   CAML_EV_END(EV_MAJOR_ROOTS_LOCAL);
   /* Global C roots */
   CAML_EV_BEGIN(EV_MAJOR_ROOTS_C);
@@ -457,9 +464,16 @@ void caml_do_roots (scanning_action f, int do_globals)
   CAML_EV_END(EV_MAJOR_ROOTS_HOOK);
 }
 
+#ifdef __llir__
+void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
+                         uintnat last_retaddr, value * gc_regs,
+                         struct caml__roots_block * local_roots,
+                         struct caml_context *callback_link)
+#else
 void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
                          uintnat last_retaddr, value * gc_regs,
                          struct caml__roots_block * local_roots)
+#endif
 {
   char * sp;
   uintnat retaddr;
@@ -470,9 +484,6 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
   unsigned short * p;
   value * root;
   struct caml__roots_block *lr;
-#ifdef __llir__
-  struct caml_context *current_context = Caml_state->callback_link;
-#endif
   sp = bottom_of_stack;
   retaddr = last_retaddr;
   regs = gc_regs;
@@ -506,8 +517,8 @@ void caml_do_local_roots(scanning_action f, char * bottom_of_stack,
         /* This marks the top of a stack chunk for an ML callback.
            Skip C portion of stack and continue with next ML stack chunk. */
 #ifdef __llir__
-        struct caml_context *next_context = current_context;
-        current_context = current_context->next_context;
+        struct caml_context *next_context = callback_link;
+        callback_link = callback_link->next_context;
 #else
         struct caml_context *next_context = Callback_link(sp);
 #endif

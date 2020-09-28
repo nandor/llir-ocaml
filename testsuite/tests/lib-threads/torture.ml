@@ -1,10 +1,9 @@
 (* TEST
 
-* not-llir
-** hassysthreads
+* hassysthreads
 include systhreads
-*** bytecode
-*** native
+** bytecode
+** native
 
 *)
 

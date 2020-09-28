@@ -161,8 +161,13 @@ static void caml_thread_scan_roots(scanning_action action)
     if (th != curr_thread) {
 #ifdef NATIVE_CODE
       if (th->bottom_of_stack != NULL)
+#ifdef __llir__
+        caml_do_local_roots(action, th->bottom_of_stack, th->last_retaddr,
+                       th->gc_regs, th->local_roots, th->callback_link);
+#else
         caml_do_local_roots(action, th->bottom_of_stack, th->last_retaddr,
                        th->gc_regs, th->local_roots);
+#endif
 #else
       caml_do_local_roots(action, th->sp, th->stack_high, th->local_roots);
 #endif

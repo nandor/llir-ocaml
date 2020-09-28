@@ -84,12 +84,7 @@ CAMLdeprecated_typedef(addr, char *);
 
 /* Export control (to mark primitives and to handle Windows DLL) */
 
-#ifdef __llir__
-#define CAMLexport __attribute__((no_dead_strip))
-#else
 #define CAMLexport
-#endif
-
 #define CAMLprim
 #define CAMLextern extern
 

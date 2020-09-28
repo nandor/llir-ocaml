@@ -162,14 +162,11 @@ let end_gen_implementation ?toplevel ~ppf_dump
      when part of a C library, won't be discarded by the linker.
      This is important if a module that uses such a symbol is later
      dynlinked. *)
-  if not Config.llir then begin
-    compile_phrase ~ppf_dump
-      (Cmm_helpers.reference_symbols
-         (List.filter_map (fun prim ->
-             if not (Primitive.native_name_is_external prim) then None
-             else Some (Primitive.native_name prim))
-            !Translmod.primitive_declarations));
-  end;
+  (Emit.reference_symbols
+     (List.filter_map (fun prim ->
+         if not (Primitive.native_name_is_external prim) then None
+         else Some (Primitive.native_name prim))
+        !Translmod.primitive_declarations));
   emit_end_assembly ()
 
 type middle_end =

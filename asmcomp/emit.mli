@@ -19,3 +19,4 @@ val fundecl: Linear.fundecl -> unit
 val data: Cmm.data_item list -> unit
 val begin_assembly: unit -> unit
 val end_assembly: unit -> unit
+val reference_symbols: string list -> unit

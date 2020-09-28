@@ -617,6 +617,11 @@ let data = function
     `  .end\n`;
     `\n`
 
+let reference_symbols symbols =
+  List.iter
+    (fun symbol -> `.extern {emit_symbol symbol}\n`)
+    symbols
+
 let begin_assembly () = ()
 
 let end_assembly () = ()
