@@ -592,7 +592,7 @@ let fundecl f =
       `  invoke.c {emit_temp addr}, {emit_label h} {emit_frame false dbg}\n`;
       `  trap\n`
     );
-  `\n`
+  `\n  .end\n`
 
 let data = function
   | [] ->
