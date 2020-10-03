@@ -29,7 +29,7 @@
 ################################################################################
 # caml_callback_asm
 ################################################################################
-  .text
+  .section .text
   .globl caml_callback_asm
 caml_callback_asm:
   .call             c
@@ -44,11 +44,12 @@ caml_callback_asm:
   undef.i64         $23                # Arg 3
   mov.i64           $30, caml_start_program_helper
   tcall.i64.c       $30, $0, $10, $20, $1, $22, $23
+  .end
 
 ################################################################################
 # caml_callback2_asm
 ################################################################################
-  .text
+  .section .text
   .globl caml_callback2_asm
 caml_callback2_asm:
   .call             c
@@ -68,11 +69,12 @@ caml_callback2_asm:
   mov.i64           $30, caml_start_program_helper
   mov.i64           $10, caml_apply2
   tcall.i64.c       $30, $0, $10, $20, $21, $1, $23
+  .end
 
 ################################################################################
 # caml_callback3_asm
 ################################################################################
-  .text
+  .section .text
   .globl caml_callback3_asm
 caml_callback3_asm:
   .call             c
@@ -94,11 +96,12 @@ caml_callback3_asm:
   mov.i64           $30, caml_start_program_helper
   mov.i64           $10, caml_apply3
   tcall.i64.c       $30, $0, $10, $20, $21, $22, $1
+  .end
 
 ################################################################################
 # caml_raise_exn
 ################################################################################
-  .text
+  .section .text
   .globl caml_raise_exn
 caml_raise_exn:
   .call       c
@@ -135,9 +138,8 @@ caml_raise_exn:
   ld.i64      $21, [$18]    # Next frame.
 
   # Jump.
-  set.i64     $rsp, $20
   st          [$14], $21
-  ji          $19
+  raise       $19, $20
 .Lactive.caml_raise_exn:
   arg.i64     $10, 0
 
@@ -151,12 +153,13 @@ caml_raise_exn:
   call.c      $17, $10, $11, $12, $14
 
   jmp         .Lthrow.caml_raise_exn
+  .end
 
 
 ################################################################################
 # caml_raise_exception
 ################################################################################
-  .text
+  .section .text
   .globl caml_raise_exception
 caml_raise_exception:
   .call       c
@@ -192,9 +195,8 @@ caml_raise_exception:
   ld.i64      $21, [$18]    # Next frame.
 
   # Jump.
-  set.i64     $rsp, $20
   st          [$14], $21
-  ji          $19
+  raise       $19, $20
 .Lactive.caml_raise_exception:
   arg.i64     $10, 1
 
@@ -212,12 +214,13 @@ caml_raise_exception:
   call.c      $17, $10, $12, $14, $16
 
   jmp .Lthrow.caml_raise_exception
+  .end
 
 
 ################################################################################
 # caml_start_program
 ################################################################################
-  .text
+  .section .text
   .globl caml_start_program
 caml_start_program:
   .call             c
@@ -233,6 +236,7 @@ caml_start_program:
   undef.i64         $23                # Arg 3
   mov.i64           $30, caml_start_program_helper
   tcall.i64.c       $30, $0, $10, $20, $21, $22, $23
+  .end
 
 ################################################################################
 # caml_start_program_helper
@@ -323,11 +327,13 @@ caml_start_program_helper:
   mov.i64           $202, 2
   or.i64            $203, $201, $202
   jmp               .Lreturn_impl
+  .end
 
 ################################################################################
 # caml_stack_overflow
 ################################################################################
-  .text
+  .section .text
   .globl caml_stack_overflow
 caml_stack_overflow:
   trap
+  .end

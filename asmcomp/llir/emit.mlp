@@ -27,7 +27,7 @@ let emit_symbol s = Emitaux.emit_symbol '$' s
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
 let fundecl f =
-  `  .text\n`;
+  `  .section .text\n`;
   `  .globl {emit_symbol f.fun_name}\n`;
   `{emit_symbol f.fun_name}:\n`;
   `  .call\tcaml\n`;
@@ -517,11 +517,10 @@ let fundecl f =
         `  ld.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
         let frame_val = make_temp () in
         `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
-        `  set.i64 $rsp, {emit_temp sp_val}\n`;
         `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
         (match lbl_handler with
         | None ->
-          `  ji {emit_temp addr}\n`
+          `  raise {emit_temp addr}, {emit_temp sp_val}\n`
         | Some h ->
           `  jmp {emit_label h}\n`)
       end

@@ -412,11 +412,11 @@ AS_IF([test x"$enable_unix_lib" = "xno" -o x"$enable_str_lib" = "xno"],
 # Override options for LLIR.
 AS_IF([test x"$enable_llir" = "xyes"],
   [llir=true
-   ac_tool_prefix=llir-${ac_tool_prefix}
-   LD=llir-ld
-   CC=llir-gcc
-   AS=llir-as
-   ASPP=llir-gcc -c],
+   ac_tool_prefix="llir_x86_64-unknown-linux-${ac_tool_prefix}"
+   LD=${ac_tool_prefix}ld
+   CC=${ac_tool_prefix}gcc
+   AS=${ac_tool_prefix}as
+   ASPP="${ac_tool_prefix}gcc -c"],
   [llir=false])
 
 # Initialization of libtool
