@@ -12,7 +12,7 @@
 /*                                                                        */
 /**************************************************************************/
 
-    .text
+    .section .text
     .globl  call_gen_code
 call_gen_code:
     .call c
@@ -27,8 +27,9 @@ call_gen_code:
     arg.i64          $4, 4
     call.i64.caml    $5, $0, $1, $2, $3, $4
     ret              $5
+    .end
 
-    .data
+    .section .data
     .globl  caml_negf_mask
     .align  16
 caml_negf_mask:

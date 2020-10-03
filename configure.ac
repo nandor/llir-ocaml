@@ -409,20 +409,27 @@ AS_IF([test x"$enable_unix_lib" = "xno" -o x"$enable_str_lib" = "xno"],
      with_camltex=""])],
   [with_camltex="true"])
 
-# Override options for LLIR.
-AS_IF([test x"$enable_llir" = "xyes"],
-  [llir=true
-   ac_tool_prefix="llir_x86_64-unknown-linux-${ac_tool_prefix}"
-   LD=${ac_tool_prefix}ld
-   CC=${ac_tool_prefix}gcc
-   AS=${ac_tool_prefix}as
-   ASPP="${ac_tool_prefix}gcc -c"],
-  [llir=false])
-
 # Initialization of libtool
 # Allow the MSVC linker to be found even if ld isn't installed.
 # User-specified LD still takes precedence.
 AC_CHECK_TOOLS([LD],[ld link])
+
+# Override options for LLIR.
+AS_IF([test x"$enable_llir" = "xyes"],
+  [
+    llir=true
+    LD="llir-ld"
+    CC="gcc -target llir_$target"
+    AS="llir-as"
+    ASPP="gcc -target llir_$target -c"
+    PARTIALLD="llir-ld -r"
+    AR="llir-ar"
+    ARCMD="llir-ar"
+    RANLIB="llir-ranlib"
+    RANLIBCMD="llir-ranlib rs"
+  ],
+  [llir=false])
+
 # libtool expects host_os=mingw for native Windows
 old_host_os=$host_os
 AS_IF([test x"$host_os" = "xwindows"],[host_os=mingw])
