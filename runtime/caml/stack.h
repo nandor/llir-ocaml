@@ -139,11 +139,6 @@ extern uintnat (*caml_stack_usage_hook)(void);
 extern value * caml_globals[];
 extern char caml_globals_map[];
 extern intnat caml_globals_inited;
-#ifdef __llir__
-extern frame_descr caml_llir_frametable[];
-#else
-extern intnat * caml_frametable[];
-#endif
 
 /* Global variables moved to Caml_state in 4.10 */
 #define caml_top_of_stack (Caml_state_field(top_of_stack))

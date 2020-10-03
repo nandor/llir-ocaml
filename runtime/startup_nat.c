@@ -56,8 +56,8 @@ struct segment { char * begin; char * end; };
 static void init_static(void)
 {
 #ifdef __llir__
-  extern char *caml_data_begin, *caml_data_end;
-  extern char caml_code_begin, caml_code_end;
+  extern char caml__data_begin, caml__data_end;
+  extern char caml__code_begin, caml__code_end;
 #else
   extern struct segment caml_data_segments[], caml_code_segments[];
   int i;
@@ -70,12 +70,12 @@ static void init_static(void)
      because pointers equal to caml_data_segments[i].end are static data. */
 #ifdef __llir__
   if (caml_page_table_add(In_static_data,
-                          caml_data_begin,
-                          caml_data_end + sizeof(value)) != 0)
+                          &caml__data_begin,
+                          &caml__data_end + sizeof(value)) != 0)
     caml_fatal_error("Fatal error: not enough memory for initial page table");
 
-  caml_code_area_start = &caml_code_begin;
-  caml_code_area_end = &caml_code_end;
+  caml_code_area_start = &caml__code_begin;
+  caml_code_area_end = &caml__code_end;
 #else
   for (i = 0; caml_data_segments[i].begin != 0; i++) {
     if (caml_page_table_add(In_static_data,
