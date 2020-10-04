@@ -16,8 +16,11 @@
 /* Processor- and OS-dependent signal interface */
 
 /****************** AMD64, Linux */
+#if defined(TARGET_amd64) || defined(TARGET_llir_amd64)
+#define TARGET_is_amd64
+#endif
 
-#if defined(TARGET_amd64) && defined (SYS_linux)
+#if defined(TARGET_is_amd64) && defined (SYS_linux)
 
   #define DECLARE_SIGNAL_HANDLER(name) \
     static void name(int sig, siginfo_t * info, ucontext_t * context)
@@ -35,7 +38,7 @@
 
 /****************** AMD64, MacOSX */
 
-#elif defined(TARGET_amd64) && defined (SYS_macosx)
+#elif defined(TARGET_is_amd64) && defined (SYS_macosx)
 
   #define DECLARE_SIGNAL_HANDLER(name) \
     static void name(int sig, siginfo_t * info, void * context)
@@ -128,7 +131,7 @@
 
 /****************** AMD64, Solaris x86 */
 
-#elif defined(TARGET_amd64) && defined (SYS_solaris)
+#elif defined(TARGET_is_amd64) && defined (SYS_solaris)
 
   #include <ucontext.h>
 
@@ -148,7 +151,7 @@
 
 /****************** AMD64, OpenBSD */
 
-#elif defined(TARGET_amd64) && defined (SYS_openbsd)
+#elif defined(TARGET_is_amd64) && defined (SYS_openbsd)
 
  #define DECLARE_SIGNAL_HANDLER(name) \
  static void name(int sig, siginfo_t * info, struct sigcontext * context)
@@ -165,7 +168,7 @@
 
 /****************** AMD64, NetBSD */
 
-#elif defined(TARGET_amd64) && defined (SYS_netbsd)
+#elif defined(TARGET_is_amd64) && defined (SYS_netbsd)
 
  #include <ucontext.h>
  #define DECLARE_SIGNAL_HANDLER(name) \

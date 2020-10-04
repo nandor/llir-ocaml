@@ -1960,4 +1960,8 @@ AS_CASE([$host],
 AS_IF([test x"$enable_stdlib_manpages" != "xno"],
   [stdlib_manpages=true],[stdlib_manpages=false])
 
+AS_IF([test x"$enable_llir" = "xyes"],
+  [arch="llir_$arch"],
+  [])
+
 AC_OUTPUT

@@ -62,9 +62,10 @@
 
 #ifdef TARGET_amd64
 #define Saved_return_address(sp) *((intnat *)((sp) - 8))
-#ifndef __llir__
-#define Callback_link(sp) ((struct caml_context *)((sp) + 16))
 #endif
+
+#ifdef TARGET_llir_amd64
+#define Saved_return_address(sp) *((intnat *)((sp) - 8))
 #endif
 
 #ifdef TARGET_arm64
