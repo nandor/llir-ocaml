@@ -562,17 +562,17 @@ let fundecl f =
     f.fun_args;
 
   (* Find all stack objects. *)
-  let rec sizeof_frame n m = function
+  let rec sizeof_frame n = function
     | { desc = Lend } ->
-        m
-    | { desc = Lpushtrap _; next } ->
-        sizeof_frame (n + 1) (max (n + 1) m) next
-    | { desc = Lpoptrap _; next } ->
-        sizeof_frame (n - 1) m next
+        n
+    | { desc = Lpushtrap { trap_depth }; next } ->
+        sizeof_frame (max n trap_depth) next
+    | { desc = Lpoptrap { trap_depth }; next } ->
+        sizeof_frame (max n trap_depth) next
     | { next } ->
-        sizeof_frame n m next
+        sizeof_frame n next
   in
-  for i = 0 to sizeof_frame 0 0 f.fun_body - 1 do
+  for i = 0 to sizeof_frame (-1) f.fun_body do
     `  .stack_object {emit_int i}, 24, 8\n`;
   done;
 
