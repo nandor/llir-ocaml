@@ -418,15 +418,15 @@ AC_CHECK_TOOLS([LD],[ld link])
 AS_IF([test x"$enable_llir" = "xyes"],
   [
     llir=true
-    LD="llir-ld"
-    CC="gcc -target llir_$target"
-    AS="llir-as"
-    ASPP="gcc -target llir_$target -c"
-    PARTIALLD="llir-ld -r"
-    AR="llir-ar"
-    ARCMD="llir-ar"
-    RANLIB="llir-ranlib"
-    RANLIBCMD="llir-ranlib rs"
+    LD="llir_$target-ld"
+    CC="llir_$target-gcc"
+    AS="llir_$target-as"
+    AR="llir_$target-ar"
+    RANLIB="llir_$target-ranlib"
+    ASPP="$CC -c"
+    PARTIALLD="$LD -r"
+    ARCMD="$AR"
+    RANLIBCMD="$RANLIB rs"
   ],
   [llir=false])
 
