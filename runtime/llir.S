@@ -281,7 +281,7 @@ caml_start_program_helper:
   mov.i64           $54, .Lhandler_impl
   st                [$51], $54
   frame.i64         $52, 0, 8            # Pointer to stack frame.
-  mov.i64           $55, $rsp
+  mov.i64           $55, $sp
   st                [$52], $55
   frame.i64         $53, 0, 16           # Pointer to exn chain.
   mov.i64           $70, offset_exception_pointer
