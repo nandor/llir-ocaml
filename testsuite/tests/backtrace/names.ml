@@ -1,6 +1,7 @@
 (* TEST
    flags = "-g"
    compare_programs = "false"
+   * not-llir
  *)
 
 

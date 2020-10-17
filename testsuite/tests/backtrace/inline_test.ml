@@ -2,9 +2,10 @@
    flags = "-g"
    ocamlrunparam += ",b=1"
    * bytecode
-   * native
+   * not-llir
+   ** native
      compare_programs = "false"
-   * native
+   ** native
      ocamlopt_flags = "-O3"
      compiler_directory_suffix = ".O3"
      compare_programs = "false"

@@ -65,8 +65,13 @@ int main(int argc, char **argv)
 {
 #ifdef UNIT_INT
   { extern long FUN(void);
+#ifdef __llir__
+    extern long call_gen_codel(long (*)(void));
+    printf("%ld\n", call_gen_codel(FUN));
+#else
     extern long call_gen_code(long (*)(void));
     printf("%ld\n", call_gen_code(FUN));
+#endif
   }
 #else
   if (argc < 2) {
@@ -75,20 +80,35 @@ int main(int argc, char **argv)
   }
 #ifdef INT_INT
   { extern long FUN(long);
+#ifdef __llir__
+    extern long call_gen_codei(long (*)(long), long);
+    printf("%ld\n", call_gen_codei(FUN, atoi(argv[1])));
+#else
     extern long call_gen_code(long (*)(long), long);
     printf("%ld\n", call_gen_code(FUN, atoi(argv[1])));
+#endif
   }
 #endif
 #ifdef INT_FLOAT
   { extern double FUN(long);
+#ifdef __llir__
+    extern double call_gen_codef(double (*)(long), long);
+    printf("%f\n", call_gen_codef(FUN, atoi(argv[1])));
+#else
     extern double call_gen_code(double (*)(long), long);
     printf("%f\n", call_gen_code(FUN, atoi(argv[1])));
+#endif
   }
 #endif
 #ifdef FLOAT_CATCH
   { extern double FUN(long);
+#ifdef __llir__
+    extern double call_gen_codef(double (*)(long), long);
+    double result = call_gen_codef(FUN, 1);
+#else
     extern double call_gen_code(double (*)(long), long);
     double result = call_gen_code(FUN, 1);
+#endif
     FLOATTEST(result, 1110.0)
     printf("%f\n", result);
   }

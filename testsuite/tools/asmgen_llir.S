@@ -14,12 +14,25 @@
 
     .section .text
     .globl  call_gen_code
-call_gen_code:
+call_gen_codei:
     .call c
-    .args             i64, i64, i64, i64, i64
-
+    .args            i64, i64, i64, i64, i64
     mov.i64          $99, Caml_state
+    arg.i64          $0, 0
+    arg.i64          $1, 1
+    arg.i64          $2, 2
+    arg.i64          $3, 3
+    arg.i64          $4, 4
+    call.i32.caml $5, $0, $1, $2, $3, $4
+    ret              $5
+    .end
 
+
+    .globl  call_gen_code
+call_gen_codel:
+    .call c
+    .args            i64, i64, i64, i64, i64
+    mov.i64          $99, Caml_state
     arg.i64          $0, 0
     arg.i64          $1, 1
     arg.i64          $2, 2
@@ -27,6 +40,34 @@ call_gen_code:
     arg.i64          $4, 4
     call.i64.caml    $5, $0, $1, $2, $3, $4
     ret              $5
+    .end
+
+
+    .globl  call_gen_code
+call_gen_codef:
+    .call c
+    .args            i64, i64, i64, i64, i64
+    mov.i64          $99, Caml_state
+    arg.i64          $0, 0
+    arg.i64          $1, 1
+    arg.i64          $2, 2
+    arg.i64          $3, 3
+    arg.i64          $4, 4
+    call.f64.caml    $5, $0, $1, $2, $3, $4
+    ret              $5
+    .end
+
+    .globl  call_gen_code
+call_gen_code:
+    .call c
+    .args            i64, i64, i64, i64, i64
+    mov.i64          $99, Caml_state
+    arg.i64          $0, 0
+    arg.i64          $1, 1
+    arg.i64          $2, 2
+    arg.i64          $3, 3
+    arg.i64          $4, 4
+    tcall.caml       $0, $1, $2, $3, $4
     .end
 
     .section .data

@@ -1,4 +1,5 @@
 (* TEST
+  * bytecode
 *)
 
 Random.init 12345;;
