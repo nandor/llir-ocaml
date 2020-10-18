@@ -255,11 +255,11 @@ let fundecl f =
       | Some handler ->
         `  invoke{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}, {emit_label handler} {emit_frame false dbg}\n`)
     | Itailcall_ind(_) ->
-      `  tcall.i64.caml {emit_regs arg " " ""} {emit_frame false dbg}\n`
+      `  tcall.v64.caml {emit_regs arg " " ""} {emit_frame false dbg}\n`
     | Itailcall_imm { func } ->
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.i64.caml {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
+      `  tcall.v64.caml {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
     | Iextcall { func; alloc } ->
       let res_types = call_types res in
       let addr = make_temp () in
