@@ -79,11 +79,20 @@ let fundecl f =
       emit_string ("$" ^ string_of_int ((stamp lsl 3) lor 4))
   in
 
-  let emit_type = function
-    | Float-> emit_string "f64"
-    | Val -> emit_string "i64"
-    | Addr -> emit_string "i64"
-    | Int -> emit_string "i64"
+  let string_of_type = function
+    | Float-> "f64"
+    | Val -> "v64"
+    | Addr -> "i64"
+    | Int -> "i64"
+  in
+
+  let emit_type typ =
+    emit_string (string_of_type typ)
+  in
+
+  let emit_res = function
+    | [| { typ } |] -> emit_type typ
+    | _ -> assert false
   in
 
   let emit_regs regs st en =
@@ -103,87 +112,13 @@ let fundecl f =
     emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
   in
 
-  let emit_value res = match res with
-    | [| |] -> ()
-    | [| { typ = Val } |] -> `\t@caml_value`
-    | [| { typ = Addr } |] -> `\t@caml_addr`
-    | [| { typ = _ } |] -> ()
-    | _ -> assert false
-  in
-
-  let call_types res =
-    String.concat ""
-      (List.map
-        (fun reg ->
-          match reg.typ with
-          | Float -> ".f64"
-          | _ -> ".i64")
-        (Array.to_list res))
-  in
-
-  let domain_field f =
-    let field = make_temp () in
-    let base_ptr = emit_addr "Caml_state" in
-    let base = make_temp () in
-    let offset = emit_const (Domainstate.idx_of_field f * 8) in
-    `  ld.i64 {emit_temp base}, {emit_temp base_ptr}\n`;
-    `  add.i64 {emit_temp field}, {emit_temp base}, {emit_temp offset}\n`;
-    field
-  in
-
-  (* Exception handler stack *)
-  let emit_call = function
-    | None -> emit_string "call"
-    | Some _ -> emit_string "invoke"
-  in
-
-  let emit_handler = function
-    | None -> ()
-    | Some h -> `, {emit_label h}`
-  in
-
-  let emit_intop res lhs rhs dbg op handler =
-    let emit inst =
-      `  {emit_string inst}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}{emit_value res}\n`
-    in
-    match op with
-    | Iadd    -> emit "add"
-    | Isub    -> emit "sub"
-    | Imul    -> emit "mul"
-    | Imulh   ->
-      let rega = make_temp () in
-      let regb = make_temp () in
-      let regr = make_temp () in
-      let regc = make_temp () in
-      `  sext.i128 {emit_temp rega}, {emit_reg lhs.(0)}\n`;
-      `  sext.i128 {emit_temp regb}, {rhs ()}\n`;
-      `  mul.i128 {emit_temp regr}, {emit_temp rega}, {emit_temp regb}\n`;
-      `  mov.i8 {emit_temp regc}, 64\n`;
-      `  srl.i128 {emit_temp regr}, {emit_temp regr}, {emit_temp regc}\n`;
-      `  trunc.i64 {emit_reg res.(0)}, {emit_temp regr}\n`
-    | Idiv    -> emit "sdiv"
-    | Imod    -> emit "srem"
-    | Iand    -> emit "and"
-    | Ior     -> emit "or"
-    | Ixor    -> emit "xor"
-    | Ilsl    -> emit "sll"
-    | Ilsr    -> emit "srl"
-    | Iasr    -> emit "sra"
-    | Icomp cc ->
-        `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
-    | Icheckbound _ ->
-      let label =
-        match List.assoc_opt handler !bound_error_labels with
-        | None ->
-          let label = new_label () in
-          bound_error_labels := (handler, (label, dbg)) :: !bound_error_labels;
-          label
-        | Some (label, _) ->
-          label
-      in
-      let flag = make_temp () in
-      `  cmp.ule.i8 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
-      `  jt {emit_temp flag}, {emit_label label}\n`
+  let call_types = function
+    | [||] -> ""
+    | res ->
+      Array.to_list res
+      |> List.map (fun { typ } -> string_of_type typ)
+      |> String.concat "."
+      |> (fun s -> "." ^ s)
   in
 
   let encode_dbgs kind dbgs =
@@ -235,25 +170,90 @@ let fundecl f =
     `))`;
   in
 
+  let domain_field f =
+    let field = make_temp () in
+    let base_ptr = emit_addr "Caml_state" in
+    let base = make_temp () in
+    let offset = emit_const (Domainstate.idx_of_field f * 8) in
+    `  ld.i64 {emit_temp base}, {emit_temp base_ptr}\n`;
+    `  add.i64 {emit_temp field}, {emit_temp base}, {emit_temp offset}\n`;
+    field
+  in
+
+  (* Exception handler stack *)
+  let emit_intop res lhs rhs dbg op handler =
+    let emit inst =
+      `  {emit_string inst}.{emit_res res} {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`
+    in
+    match op with
+    | Iadd    -> emit "add"
+    | Isub    -> emit "sub"
+    | Imul    -> emit "mul"
+    | Idiv    -> emit "sdiv"
+    | Imod    -> emit "srem"
+    | Iand    -> emit "and"
+    | Ior     -> emit "or"
+    | Ixor    -> emit "xor"
+    | Ilsl    -> emit "sll"
+    | Ilsr    -> emit "srl"
+    | Iasr    -> emit "sra"
+    | Imulh   ->
+      let rega = make_temp () in
+      let regb = make_temp () in
+      let regr = make_temp () in
+      let regc = make_temp () in
+      `  sext.i128 {emit_temp rega}, {emit_reg lhs.(0)}\n`;
+      `  sext.i128 {emit_temp regb}, {rhs ()}\n`;
+      `  mul.i128 {emit_temp regr}, {emit_temp rega}, {emit_temp regb}\n`;
+      `  mov.i8 {emit_temp regc}, 64\n`;
+      `  srl.i128 {emit_temp regr}, {emit_temp regr}, {emit_temp regc}\n`;
+      `  trunc.i64 {emit_reg res.(0)}, {emit_temp regr}\n`
+    | Icomp cc ->
+        `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+    | Icheckbound _ ->
+      let label =
+        match List.assoc_opt handler !bound_error_labels with
+        | None ->
+          let label = new_label () in
+          bound_error_labels := (handler, (label, dbg)) :: !bound_error_labels;
+          label
+        | Some (label, _) ->
+          label
+      in
+      let flag = make_temp () in
+      `  cmp.ule.i8 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
+      `  jt {emit_temp flag}, {emit_label label}\n`
+  in
+
   let emit_op arg res handler dbg = function
+    | Ispill
+    | Ireload
+    | Istackoffset _ ->
+      assert false
     | Imove ->
-      `  mov.{emit_type res.(0).typ} {emit_reg res.(0)}, {emit_reg arg.(0)}{emit_value res}\n`
-    | Ispill  -> assert false
-    | Ireload -> assert false
+      `  mov.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
     | Iconst_int(n) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_printf "0x%nx" n}{emit_value res}\n`;
+      `  mov.{emit_res res} {emit_reg res.(0)}, {emit_printf "0x%nx" n}\n`;
     | Iconst_float(f) ->
       `  mov.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(s) ->
-      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}{emit_value res}\n`;
+      `  mov.{emit_res res} {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
       let types = call_types res in
-      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
+      (match handler with
+      | None ->
+        `  call{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""} {emit_frame false dbg}\n`
+      | Some handler ->
+        `  invoke{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}, {emit_label handler} {emit_frame false dbg}\n`)
     | Icall_imm { func } ->
       let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  {emit_call handler}{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
+      (match handler with
+      | None ->
+        `  call{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """} {emit_frame false dbg}\n`
+      | Some handler ->
+        `  invoke{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}, {emit_label handler} {emit_frame false dbg}\n`)
     | Itailcall_ind(_) ->
       `  tcall.i64.caml {emit_regs arg " " ""} {emit_frame false dbg}\n`
     | Itailcall_imm { func } ->
@@ -264,13 +264,15 @@ let fundecl f =
       let res_types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      if alloc then begin
-        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
-      end else begin
-        `  {emit_call handler}{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}{emit_handler handler} {emit_frame false dbg}{emit_value res}\n`
-      end
-    | Istackoffset(_) ->
-      assert false
+      (match handler with
+      | None when alloc ->
+        ` call{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
+      | None ->
+        ` call{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}\n`
+      | Some handler when alloc ->
+        ` invoke{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}, {emit_label handler} {emit_frame false dbg}\n`
+      | Some handler ->
+        ` invoke{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}, {emit_label handler}\n`)
     | Iload(size, addr) ->
       let extension from dst kind =
         let ext = make_temp () in
@@ -291,19 +293,25 @@ let fundecl f =
         | Single              -> extension "f32" "f64" "fext"
         | Word_int
         | Word_val ->
-          ( "i64", (fun () -> emit_reg res.(0)), (fun () -> ()))
+          ( string_of_type res.(0).typ
+          , (fun () -> emit_reg res.(0))
+          , (fun () -> ())
+          )
         | Double
         | Double_u ->
-          ( "f64", (fun () -> emit_reg res.(0)), (fun () -> ()))
+          ( "f64"
+          , (fun () -> emit_reg res.(0))
+          , (fun () -> ())
+          )
       in
       (match addr with
       | Iindexed(0) ->
-        `  ld.{emit_string load_ty} {temp ()}, [{emit_reg arg.(0)}]{emit_value res}\n`
+        `  ld.{emit_string load_ty} {temp ()}, [{emit_reg arg.(0)}]\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  ld.{emit_string load_ty} {temp ()}, [{emit_temp addr}]{emit_value res}\n`
+        `  ld.{emit_string load_ty} {temp ()}, [{emit_temp addr}]\n`
       );
       extend ()
     | Istore(size, addr, _) ->
@@ -344,11 +352,13 @@ let fundecl f =
         | _  -> [emit_addr "caml_allocN"; emit_const bytes]
       in
       let young_ptr = make_temp () in
-      ` {emit_call handler}.i64.caml_alloc`;
-      ` {emit_temp young_ptr}, {emit_temps args}{emit_handler handler}`;
-      ` {emit_alloc_frame dbginfo}\n`;
+      (match handler with
+      | None ->
+        ` call.i64.caml_alloc {emit_temp young_ptr}, {emit_temps args} {emit_alloc_frame dbginfo}\n`
+      | Some handler ->
+        ` invoke.i64.caml_alloc {emit_temp young_ptr}, {emit_temps args}, {emit_label handler} {emit_alloc_frame dbginfo}\n`);
       let offset = emit_const 8 in
-      ` add.i64 {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp offset} {emit_value res}\n`
+      ` add.{emit_res res} {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp offset}\n`
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) dbg op handler
     | Iintop_imm(op, n) ->
@@ -453,7 +463,7 @@ let fundecl f =
       `\n`
     | Lentertrap ->
       let val_addr = domain_field Domainstate.Domain_exception_value in
-      `  ld.8.i64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}] @caml_value\n`
+      `  ld.8.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
     | Lpushtrap { lbl_handler; trap_depth } ->
       let jmp_addr = make_temp () in
       let jmp_frame = make_temp () in
@@ -550,15 +560,12 @@ let fundecl f =
   Array.iteri
     (fun i reg ->
       if i <> 0 then `, `;
-      `{emit_type reg.Reg.typ}`)
+      `{emit_type reg.typ}`)
     f.fun_args;
   `\n`;
   Array.iteri
     (fun i reg ->
-      match reg.typ with
-      | Float ->      `  arg.f64 {emit_reg reg}, {emit_int i}\n`
-      | Val ->        `  arg.i64 {emit_reg reg}, {emit_int i} @caml_value\n`
-      | Addr | Int -> `  arg.i64 {emit_reg reg}, {emit_int i}\n`)
+      `  arg.{emit_type reg.typ} {emit_reg reg}, {emit_int i}\n`)
     f.fun_args;
 
   (* Find all stack objects. *)
