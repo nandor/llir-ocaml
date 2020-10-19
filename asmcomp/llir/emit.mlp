@@ -228,16 +228,18 @@ let fundecl f =
   let emit_op arg res handler dbg = function
     | Ispill
     | Ireload
-    | Istackoffset _ ->
+    | Istackoffset _
+    | Ispecific _
+    | Iname_for_debugger _ ->
       assert false
     | Imove ->
       `  mov.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`
     | Iconst_int(n) ->
-      `  mov.{emit_res res} {emit_reg res.(0)}, {emit_printf "0x%nx" n}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_printf "0x%nx" n}\n`;
     | Iconst_float(f) ->
       `  mov.f64 {emit_reg res.(0)}, {emit_printf "0x%Lx" f}\n`;
     | Iconst_symbol(s) ->
-      `  mov.{emit_res res} {emit_reg res.(0)}, {emit_symbol s}\n`;
+      `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
       let types = call_types res in
       (match handler with
@@ -380,10 +382,6 @@ let fundecl f =
       `  sext.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iintoffloat ->
       `  trunc.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
-    | Ispecific(_) ->
-      assert false
-    | Iname_for_debugger(_) ->
-      assert false
   in
 
   let emit_instr arg res dbg = function
