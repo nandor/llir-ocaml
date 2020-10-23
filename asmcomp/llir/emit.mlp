@@ -528,7 +528,7 @@ let fundecl f =
         `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
         (match lbl_handler with
         | None ->
-          `  raise {emit_temp addr}, {emit_temp sp_val}\n`
+          `  raise.caml {emit_temp addr}, {emit_temp sp_val}\n`
         | Some h ->
           `  jmp {emit_label h}\n`)
       end

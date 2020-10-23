@@ -139,7 +139,7 @@ caml_raise_exn:
 
   # Jump.
   st          [$14], $21
-  raise       $19, $20
+  raise.caml  $19, $20
 .Lactive.caml_raise_exn:
   arg.i64     $10, 0
 
@@ -196,7 +196,7 @@ caml_raise_exception:
 
   # Jump.
   st          [$14], $21
-  raise       $19, $20
+  raise.caml  $19, $20
 .Lactive.caml_raise_exception:
   arg.i64     $10, 1
 
