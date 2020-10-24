@@ -16,15 +16,16 @@
     .globl  call_gen_code
 call_gen_codei:
     .call c
-    .args            i64, i64, i64, i64, i64
-    mov.i64          $99, Caml_state
-    arg.i64          $0, 0
-    arg.i64          $1, 1
-    arg.i64          $2, 2
-    arg.i64          $3, 3
-    arg.i64          $4, 4
-    call.i32.caml $5, $0, $1, $2, $3, $4
-    ret              $5
+    .args                    i64, i64, i64, i64, i64
+    mov.i64                  $100, Caml_state
+    mov.i64                  $101, 0
+    arg.i64                  $0, 0
+    arg.i64                  $1, 1
+    arg.i64                  $2, 2
+    arg.i64                  $3, 3
+    arg.i64                  $4, 4
+    call.i64.i64.i32.caml    $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
+    ret                      $7
     .end
 
 
@@ -32,42 +33,46 @@ call_gen_codei:
 call_gen_codel:
     .call c
     .args            i64, i64, i64, i64, i64
-    mov.i64          $99, Caml_state
-    arg.i64          $0, 0
-    arg.i64          $1, 1
-    arg.i64          $2, 2
-    arg.i64          $3, 3
-    arg.i64          $4, 4
-    call.i64.caml    $5, $0, $1, $2, $3, $4
-    ret              $5
+    mov.i64                  $100, Caml_state
+    mov.i64                  $101, 0
+    arg.i64                  $0, 0
+    arg.i64                  $1, 1
+    arg.i64                  $2, 2
+    arg.i64                  $3, 3
+    arg.i64                  $4, 4
+    call.i64.i64.i64.caml    $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
+    ret                      $7
     .end
 
 
     .globl  call_gen_code
 call_gen_codef:
     .call c
-    .args            i64, i64, i64, i64, i64
-    mov.i64          $99, Caml_state
-    arg.i64          $0, 0
-    arg.i64          $1, 1
-    arg.i64          $2, 2
-    arg.i64          $3, 3
-    arg.i64          $4, 4
-    call.f64.caml    $5, $0, $1, $2, $3, $4
-    ret              $5
+    .args                    i64, i64, i64, i64, i64
+    mov.i64                  $100, Caml_state
+    mov.i64                  $101, 0
+    arg.i64                  $0, 0
+    arg.i64                  $1, 1
+    arg.i64                  $2, 2
+    arg.i64                  $3, 3
+    arg.i64                  $4, 4
+    call.i64.i64.f64.caml    $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
+    ret                      $7
     .end
 
     .globl  call_gen_code
 call_gen_code:
     .call c
-    .args            i64, i64, i64, i64, i64
-    mov.i64          $99, Caml_state
-    arg.i64          $0, 0
-    arg.i64          $1, 1
-    arg.i64          $2, 2
-    arg.i64          $3, 3
-    arg.i64          $4, 4
-    tcall.caml       $0, $1, $2, $3, $4
+    .args                    i64, i64, i64, i64, i64
+    mov.i64                  $100, Caml_state
+    mov.i64                  $101, 0
+    arg.i64                  $0, 0
+    arg.i64                  $1, 1
+    arg.i64                  $2, 2
+    arg.i64                  $3, 3
+    arg.i64                  $4, 4
+    call.i64.i64.caml        $5, $6, $100, $101, $1, $2, $3, $4
+    ret
     .end
 
     .section .data

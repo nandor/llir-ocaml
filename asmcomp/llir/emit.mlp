@@ -108,10 +108,6 @@ let fundecl f =
       emit_string en
   in
 
-  let emit_temps temps =
-    emit_string (String.concat ", " (List.map (fun n -> "$" ^ string_of_int n) temps))
-  in
-
   let call_types = function
     | [||] -> ""
     | res ->
@@ -172,11 +168,8 @@ let fundecl f =
 
   let domain_field f =
     let field = make_temp () in
-    let base_ptr = emit_addr "Caml_state" in
-    let base = make_temp () in
     let offset = emit_const (Domainstate.idx_of_field f * 8) in
-    `  ld.i64 {emit_temp base}, {emit_temp base_ptr}\n`;
-    `  add.i64 {emit_temp field}, {emit_temp base}, {emit_temp offset}\n`;
+    `  add.i64 {emit_temp field}, $5000, {emit_temp offset}\n`;
     field
   in
 
@@ -241,40 +234,71 @@ let fundecl f =
     | Iconst_symbol(s) ->
       `  mov.i64 {emit_reg res.(0)}, {emit_symbol s}\n`;
     | Icall_ind _ ->
-      let types = call_types res in
-      (match handler with
-      | None ->
-        `  call{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""} {emit_frame false dbg}\n`
-      | Some handler ->
-        `  invoke{emit_string types}.caml{emit_regs res " " ","} {emit_regs arg " " ""}, {emit_label handler} {emit_frame false dbg}\n`)
+      let callee = arg.(0) in
+      let args = Array.sub arg 1 (Array.length arg - 1) in
+      begin match handler with
+        | None -> `  call.i64.i64{emit_string (call_types res)}.caml`;
+        | Some _ -> `  invoke.i64.i64{emit_string (call_types res)}.caml`;
+      end;
+      ` $5000, $5001{emit_regs res ", " ""},`;
+      ` {emit_reg callee},`;
+      ` $5000, $5001{emit_regs args ", " ""}`;
+      begin match handler with
+        | None -> ()
+        | Some handler -> `, {emit_label handler}`;
+      end;
+      ` {emit_frame false dbg}\n`
     | Icall_imm { func } ->
-      let types = call_types res in
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      (match handler with
-      | None ->
-        `  call{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """} {emit_frame false dbg}\n`
-      | Some handler ->
-        `  invoke{emit_string types}.caml{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", """}, {emit_label handler} {emit_frame false dbg}\n`)
+      begin match handler with
+        | None -> `  call.i64.i64{emit_string (call_types res)}.caml`;
+        | Some _ -> `  invoke.i64.i64{emit_string (call_types res)}.caml`
+      end;
+      ` $5000, $5001{emit_regs res ", " ""},`;
+      ` {emit_temp addr},`;
+      ` $5000, $5001{emit_regs arg ", " ""}`;
+      begin match handler with
+        | None -> ()
+        | Some handler -> `, {emit_label handler}`
+      end;
+      ` {emit_frame false dbg}\n`
     | Itailcall_ind(_) ->
-      `  tcall.v64.caml {emit_regs arg " " ""} {emit_frame false dbg}\n`
+      assert (Option.is_none handler);
+      let callee = arg.(0) in
+      let args = Array.sub arg 1 (Array.length arg - 1) in
+      `  tcall.i64.i64.v64.caml`;
+      ` {emit_reg callee},`;
+      ` $5000, $5001{emit_regs args ", " ""}`;
+      ` {emit_frame false dbg}\n`;
     | Itailcall_imm { func } ->
+      assert (Option.is_none handler);
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.v64.caml {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
+      `  tcall.i64.i64.v64.caml`;
+      ` {emit_temp addr},`;
+      ` $5000, $5001{emit_regs arg ", " ""}`;
+      ` {emit_frame false dbg}\n`
     | Iextcall { func; alloc } ->
-      let res_types = call_types res in
+      let young_ptr_addr = domain_field Domainstate.Domain_young_ptr in
+      `  st.i64  [{emit_temp young_ptr_addr}], $5001\n`;
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      (match handler with
-      | None when alloc ->
-        ` call{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""} {emit_frame false dbg}\n`
-      | None ->
-        ` call{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}\n`
-      | Some handler when alloc ->
-        ` invoke{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}, {emit_label handler} {emit_frame false dbg}\n`
-      | Some handler ->
-        ` invoke{emit_string res_types}.c{emit_regs res " " ","} {emit_temp addr}{emit_regs arg ", " ""}, {emit_label handler}\n`)
+      begin match handler with
+        | None -> `  call`;
+        | Some _ -> `  invoke`;
+      end;
+      `{emit_string (call_types res)}.c`;
+      ` {emit_regs res "" ","}`;
+      ` {emit_temp addr}`;
+      ` {emit_regs arg ", " ""}`;
+      begin match handler with
+        | None -> ()
+        | Some handler -> `, {emit_label handler}`;
+      end;
+      if alloc then ` {emit_frame false dbg}`;
+      `\n`;
+      `  ld.i64 $5001, [{emit_temp young_ptr_addr}]\n`
     | Iload(size, addr) ->
       let extension from dst kind =
         let ext = make_temp () in
@@ -347,20 +371,25 @@ let fundecl f =
         `  st [{emit_temp addr}], {ext ()}\n`
       );
     | Ialloc { bytes; dbginfo } ->
-      let args = match bytes with
-        | 16 -> [emit_addr "caml_alloc1"]
-        | 24 -> [emit_addr "caml_alloc2"]
-        | 32 -> [emit_addr "caml_alloc3"]
-        | _  -> [emit_addr "caml_allocN"; emit_const bytes]
+      let adjust, func =
+        match bytes with
+        | 16 -> None, "caml_alloc1"
+        | 24 -> None, "caml_alloc2"
+        | 32 -> None, "caml_alloc3"
+        | _ -> Some bytes, "caml_allocN"
       in
-      let young_ptr = make_temp () in
-      (match handler with
+      adjust |> Option.iter (fun bytes ->
+        let vreg_bytes = emit_const bytes in
+        `  sub.i64 $5001, $5001, {emit_temp vreg_bytes}\n`);
+      let fn = emit_addr func in
+      begin match handler with
       | None ->
-        ` call.i64.caml_alloc {emit_temp young_ptr}, {emit_temps args} {emit_alloc_frame dbginfo}\n`
+        `  call.i64.i64.caml_alloc $5000, $5001, {emit_temp fn}, $5000, $5001 {emit_alloc_frame dbginfo}\n`
       | Some handler ->
-        ` invoke.i64.caml_alloc {emit_temp young_ptr}, {emit_temps args}, {emit_label handler} {emit_alloc_frame dbginfo}\n`);
+        `  invoke.i64.i64.caml_alloc $5000, $5001, {emit_temp fn}, $5000, $5001, {emit_label handler} {emit_alloc_frame dbginfo}\n`
+      end;
       let offset = emit_const 8 in
-      ` add.{emit_res res} {emit_reg res.(0)}, {emit_temp young_ptr}, {emit_temp offset}\n`
+      `  add.{emit_res res} {emit_reg res.(0)}, $5001, {emit_temp offset}\n`
     | Iintop(op) ->
       emit_intop res arg (fun () -> emit_reg arg.(1)) dbg op handler
     | Iintop_imm(op, n) ->
@@ -390,7 +419,7 @@ let fundecl f =
     | Lop(op, handler) ->
       emit_op arg res handler dbg op
     | Lreturn ->
-      `  ret {emit_regs arg " " ""}\n`;
+      `  ret $5000, $5001{emit_regs arg ", " ""}\n`;
     | Llabel(label) ->
       `{emit_label label}:\n`
     | Lbranch(label) ->
@@ -460,8 +489,12 @@ let fundecl f =
       ) labels;
       `\n`
     | Lentertrap ->
-      let val_addr = domain_field Domainstate.Domain_exception_value in
-      `  ld.8.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp val_addr}]\n`
+      let state_addr = emit_addr "Caml_state" in
+      `  ld.i64 $5000, [{emit_temp state_addr}]\n`;
+      let young_ptr_addr = domain_field Domainstate.Domain_young_ptr in
+      `  ld.i64 $5001, [{emit_temp young_ptr_addr}]\n`;
+      let exception_value_addr = domain_field Domainstate.Domain_exception_value in
+      `  ld.8.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp exception_value_addr}]\n`
     | Lpushtrap { lbl_handler; trap_depth } ->
       let jmp_addr = make_temp () in
       let jmp_frame = make_temp () in
@@ -492,13 +525,17 @@ let fundecl f =
     | Lraise { kind; lbl_handler } ->
       let emit_call () =
         let fn = emit_addr "caml_raise_exn" in
-        match lbl_handler with
-        | None ->
-          `  call.caml_raise {emit_temp fn}{emit_regs arg ", " ""} {emit_frame true dbg}\n`;
-          `  trap\n`
-        | Some h ->
-          `  invoke.caml_raise {emit_temp fn}{emit_regs arg ", " ""}, {emit_label h} {emit_frame true dbg}\n`;
-          `  trap\n`
+        begin match lbl_handler with
+          | None -> `  call.caml`;
+          | Some _ -> `  invoke.caml`;
+        end;
+        `  {emit_temp fn}, $5000, $5001{emit_regs arg ", " ""} `;
+        begin match lbl_handler with
+          | None -> ()
+          | Some handler -> `, {emit_label handler}`
+        end;
+        ` {emit_frame true dbg}\n`;
+        `  trap\n`
       in
       begin match kind with
       | Lambda.Raise_regular ->
@@ -509,6 +546,8 @@ let fundecl f =
       | Lambda.Raise_reraise ->
         emit_call ()
       | Lambda.Raise_notrace ->
+        let young_ptr_addr = domain_field Domainstate.Domain_young_ptr in
+        `  st.i64  [{emit_temp young_ptr_addr}], $5001\n`;
         let val_addr = domain_field Domainstate.Domain_exception_value in
         `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
         let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
@@ -546,24 +585,22 @@ let fundecl f =
       ()
     | { next = { desc = Lend } } when not (is_terminator i.desc) ->
         emit_instr i.arg i.res i.dbg i.desc;
-        `  mov.i64 $5000, 1\n`;
-        `  ret     $5000\n`
+        `  mov.i64 $6000, 1\n`;
+        `  ret     $5000, $5001, $6000\n`
     | instr ->
       emit_instr instr.arg instr.res i.dbg instr.desc;
       emit instr.next
   in
 
   (* Emit argument types and instructions to load them. *)
-  `  .args `;
-  Array.iteri
-    (fun i reg ->
-      if i <> 0 then `, `;
-      `{emit_type reg.typ}`)
-    f.fun_args;
+  `  .args i64, i64`;
+  Array.iter (fun reg -> `, {emit_type reg.typ}`) f.fun_args;
   `\n`;
+  `  arg.i64 $5000, 0\n`;
+  `  arg.i64 $5001, 1\n`;
   Array.iteri
     (fun i reg ->
-      `  arg.{emit_type reg.typ} {emit_reg reg}, {emit_int i}\n`)
+      `  arg.{emit_type reg.typ} {emit_reg reg}, {emit_int (i + 2)}\n`)
     f.fun_args;
 
   (* Find all stack objects. *)
@@ -585,18 +622,23 @@ let fundecl f =
   emit f.fun_body;
 
   (* Emit bound error call *)
-  !bound_error_labels |> List.iter (fun (handler, (label, dbg)) ->
+  !bound_error_labels |> List.iter begin fun (handler, (label, dbg)) ->
     `{emit_label label}:\n`;
-    let addr = emit_addr "caml_array_bound_error" in
-    match handler with
-    | None   ->
-      `  call.c {emit_temp addr} {emit_frame false dbg}\n`;
-      `  trap\n`
-    | Some h ->
-      `  invoke.c {emit_temp addr}, {emit_label h} {emit_frame false dbg}\n`;
-      `  trap\n`
-    );
-  `\n  .end\n`
+    let addr = emit_addr "caml_ml_array_bound_error" in
+    begin match handler with
+      | None -> `  call.c`;
+      | Some _ -> `  invoke.c`;
+    end;
+    `  {emit_temp addr}, $5000, $5001`;
+    begin match handler with
+      | None -> ()
+      | Some handler -> `, {emit_label handler}`
+    end;
+    ` {emit_frame false dbg}\n`;
+    `  trap\n`;
+  end;
+  `\n`;
+  `  .end\n`
 
 let data = function
   | [] ->
