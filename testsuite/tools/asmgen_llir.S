@@ -71,8 +71,7 @@ call_gen_code:
     arg.i64                  $2, 2
     arg.i64                  $3, 3
     arg.i64                  $4, 4
-    call.i64.i64.caml        $5, $6, $100, $101, $1, $2, $3, $4
-    ret
+    tcall.i64.i64.caml       $0, $100, $101, $1, $2, $3, $4
     .end
 
     .section .data
