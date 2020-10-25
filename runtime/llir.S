@@ -475,7 +475,7 @@ caml_allocN:
 ################################################################################
 caml_ml_array_bound_error:
   .visibility             global_default
-  .call                   caml
+  .call                   c
   .args                   i64, i64
 
   arg.i64                 $0, 0     # Caml_state
