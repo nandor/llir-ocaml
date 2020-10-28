@@ -427,13 +427,9 @@ let fundecl f =
     | Lcondbranch(test, label) ->
       (match test with
       | Itruetest ->
-        let flag = make_temp () in
-        `  trunc.i8 {emit_temp flag}, {emit_reg arg.(0)}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+        `  jt {emit_reg arg.(0)}, {emit_label label}\n`
       | Ifalsetest ->
-        let flag = make_temp () in
-        `  trunc.i8 {emit_temp flag}, {emit_reg arg.(0)}\n`;
-        `  jf {emit_temp flag}, {emit_label label}\n`
+        `  jf {emit_reg arg.(0)}, {emit_label label}\n`
       | Iinttest cc ->
         let flag = make_temp () in
         `  cmp.{emit_cc cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
