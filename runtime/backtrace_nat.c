@@ -63,7 +63,7 @@ frame_descr * caml_next_frame_descriptor(uintnat * pc, char ** sp)
         struct caml_context *next_context = current_context;
         current_context = current_context->next_context;
 #else
-        struct caml_context *next_context = Callback_link(sp);
+        struct caml_context *next_context = Callback_link(*sp);
 #endif
       *sp = next_context->bottom_of_stack;
       *pc = next_context->last_retaddr;
