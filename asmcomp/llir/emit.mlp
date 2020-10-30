@@ -215,7 +215,7 @@ let fundecl f =
       in
       let flag = make_temp () in
       `  cmp.ule.i8 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
-      `  jt {emit_temp flag}, {emit_label label}\n`
+      `  jt {emit_temp flag}, {emit_label label} @probability(0 1)\n`
   in
 
   let emit_op arg res handler dbg = function
@@ -535,13 +535,16 @@ let fundecl f =
       in
       begin match kind with
       | Lambda.Raise_regular ->
+        `  # Lraise (Lambda.Raise_regular)\n`;
         let pos_addr = domain_field Domainstate.Domain_backtrace_pos in
         let zero = emit_const 0 in
         `  st [{emit_temp pos_addr}], {emit_temp zero}\n`;
         emit_call ()
       | Lambda.Raise_reraise ->
+        `  # Lraise (Lambda.Raise_reraise)\n`;
         emit_call ()
       | Lambda.Raise_notrace ->
+        `  # Lraise (Lambda.Raise_notrace)\n`;
         let young_ptr_addr = domain_field Domainstate.Domain_young_ptr in
         `  st.i64  [{emit_temp young_ptr_addr}], $5001\n`;
         let val_addr = domain_field Domainstate.Domain_exception_value in
@@ -622,8 +625,8 @@ let fundecl f =
     `{emit_label label}:\n`;
     let addr = emit_addr "caml_ml_array_bound_error" in
     begin match handler with
-      | None -> `  call.c`;
-      | Some _ -> `  invoke.c`;
+      | None -> `  call.caml`;
+      | Some _ -> `  invoke.caml`;
     end;
     `  {emit_temp addr}, $5000, $5001`;
     begin match handler with

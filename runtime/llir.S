@@ -475,8 +475,9 @@ caml_allocN:
 ################################################################################
 caml_ml_array_bound_error:
   .visibility             global_default
-  .call                   c
+  .call                   caml
   .args                   i64, i64
+  .noinline
 
   arg.i64                 $0, 0     # Caml_state
   arg.i64                 $1, 1     # Caml_state->young_ptr
@@ -484,6 +485,16 @@ caml_ml_array_bound_error:
   mov.i64                 $2, offset_young_ptr
   add.i64                 $3, $0, $2
   st.i64                  [$3], $1
+
+  mov.i64                 $4, $ret_addr
+  mov.i64                 $5, offset_last_return_address
+  add.i64                 $6, $0, $5
+  st                      [$6], $4
+
+  mov.i64                 $7, $frame_addr
+  mov.i64                 $8, offset_bottom_of_stack
+  add.i64                 $9, $0, $8
+  st                      [$9], $7
 
   mov.i64                 $4, caml_array_bound_error
   tcall.c                 $4
