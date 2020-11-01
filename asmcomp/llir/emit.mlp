@@ -204,15 +204,8 @@ let fundecl f =
     | Icomp cc ->
         `  cmp.{emit_cc cc}.i64 {emit_reg res.(0)}, {emit_reg lhs.(0)}, {rhs ()}\n`;
     | Icheckbound _ ->
-      let label =
-        match List.assoc_opt handler !bound_error_labels with
-        | None ->
-          let label = new_label () in
-          bound_error_labels := (handler, (label, dbg)) :: !bound_error_labels;
-          label
-        | Some (label, _) ->
-          label
-      in
+      let label = new_label () in
+      bound_error_labels := (handler, (label, dbg)) :: !bound_error_labels;
       let flag = make_temp () in
       `  cmp.ule.i8 {emit_temp flag}, {emit_reg lhs.(0)}, {rhs ()}\n`;
       `  jt {emit_temp flag}, {emit_label label} @probability(0 1)\n`
