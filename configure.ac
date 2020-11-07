@@ -1034,7 +1034,11 @@ AS_CASE([$arch],
   [AS_CASE([$host],
     [*-linux-musl],
        # Alpine and other musl-based Linux distributions
-       [common_cflags="-no-pie $common_cflags"],
+       [
+        AS_IF([test x"$enable_llir" = "xyes"],
+          [],
+          [common_cflags="-no-pie $common_cflags"])
+       ],
     [])])
 
 # Assembler
