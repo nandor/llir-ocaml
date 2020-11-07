@@ -347,11 +347,11 @@ let num_call_gc_and_check_bound_points instr =
   let rec loop instr ((call_gc, check_bound) as totals) =
     match instr.desc with
     | Lend -> totals
-    | Lop (Ialloc _) when !fastcode_flag ->
+    | Lop (Ialloc _, _) when !fastcode_flag ->
       loop instr.next (call_gc + 1, check_bound)
-    | Lop (Iintop Icheckbound _)
-    | Lop (Iintop_imm (Icheckbound _, _))
-    | Lop (Ispecific (Ishiftcheckbound _)) ->
+    | Lop (Iintop Icheckbound _, _)
+    | Lop (Iintop_imm (Icheckbound _, _), _)
+    | Lop (Ispecific (Ishiftcheckbound _), _) ->
       let check_bound =
         (* When not in debug mode, there is at most one check-bound point. *)
         if not !Clflags.debug then 1
@@ -360,10 +360,10 @@ let num_call_gc_and_check_bound_points instr =
       loop instr.next (call_gc, check_bound)
     (* The following four should never be seen, since this function is run
        before branch relaxation. *)
-    | Lop (Ispecific (Ifar_alloc _))
-    | Lop (Ispecific Ifar_intop_checkbound _)
-    | Lop (Ispecific (Ifar_intop_imm_checkbound _))
-    | Lop (Ispecific (Ifar_shiftcheckbound _)) -> assert false
+    | Lop (Ispecific (Ifar_alloc _), _)
+    | Lop (Ispecific Ifar_intop_checkbound _, _)
+    | Lop (Ispecific (Ifar_intop_imm_checkbound _), _)
+    | Lop (Ispecific (Ifar_shiftcheckbound _), _) -> assert false
     | _ -> loop instr.next totals
   in
   loop instr (0, 0)
@@ -406,10 +406,10 @@ module BR = Branch_relaxation.Make (struct
       | CB | Bcc -> 1 * 1024 * 1024 / 4  (* +/- 1Mb *)
 
     let classify_instr = function
-      | Lop (Ialloc _)
-      | Lop (Iintop Icheckbound _)
-      | Lop (Iintop_imm (Icheckbound _, _))
-      | Lop (Ispecific (Ishiftcheckbound _)) -> Some Bcc
+      | Lop (Ialloc _, _)
+      | Lop (Iintop Icheckbound _, _)
+      | Lop (Iintop_imm (Icheckbound _, _), _)
+      | Lop (Ispecific (Ishiftcheckbound _), _) -> Some Bcc
       (* The various "far" variants in [specific_operation] don't need to
          return [Some] here, since their code sequences never contain any
          conditional branches that might need relaxing. *)
@@ -436,52 +436,52 @@ module BR = Branch_relaxation.Make (struct
   let instr_size = function
     | Lend -> 0
     | Lprologue -> prologue_size ()
-    | Lop (Imove | Ispill | Ireload) -> 1
-    | Lop (Iconst_int n) ->
+    | Lop ((Imove | Ispill | Ireload), _) -> 1
+    | Lop (Iconst_int n, _) ->
       num_instructions_for_intconst n
-    | Lop (Iconst_float _) -> 2
-    | Lop (Iconst_symbol _) -> 2
-    | Lop (Icall_ind _) -> 1
-    | Lop (Icall_imm _) -> 1
-    | Lop (Itailcall_ind _) -> epilogue_size ()
-    | Lop (Itailcall_imm { func; _ }) ->
+    | Lop (Iconst_float _, _) -> 2
+    | Lop (Iconst_symbol _, _) -> 2
+    | Lop (Icall_ind _, _) -> 1
+    | Lop (Icall_imm _, _) -> 1
+    | Lop (Itailcall_ind _, _) -> epilogue_size ()
+    | Lop (Itailcall_imm { func; _ }, _) ->
       if func = !function_name then 1 else epilogue_size ()
-    | Lop (Iextcall { alloc = false; }) -> 1
-    | Lop (Iextcall { alloc = true; }) -> 3
-    | Lop (Istackoffset _) -> 2
-    | Lop (Iload (size, addr)) | Lop (Istore (size, addr, _)) ->
+    | Lop (Iextcall { alloc = false; }, _) -> 1
+    | Lop (Iextcall { alloc = true; }, _) -> 3
+    | Lop (Istackoffset _, _) -> 2
+    | Lop (Iload (size, addr), _) | Lop (Istore (size, addr, _), _) ->
       let based = match addr with Iindexed _ -> 0 | Ibased _ -> 1 in
       based + begin match size with Single -> 2 | _ -> 1 end
-    | Lop (Ialloc {bytes = num_bytes}) when !fastcode_flag ->
+    | Lop (Ialloc {bytes = num_bytes}, _) when !fastcode_flag ->
       if num_bytes <= 0xFFF then 4 else 5
-    | Lop (Ispecific (Ifar_alloc {bytes = num_bytes})) when !fastcode_flag ->
+    | Lop (Ispecific (Ifar_alloc {bytes = num_bytes}), _) when !fastcode_flag ->
       if num_bytes <= 0xFFF then 5 else 6
-    | Lop (Ialloc { bytes = num_bytes; _ })
-    | Lop (Ispecific (Ifar_alloc { bytes = num_bytes; _ })) ->
+    | Lop (Ialloc { bytes = num_bytes; _ }, _)
+    | Lop (Ispecific (Ifar_alloc { bytes = num_bytes; _ }), _) ->
       begin match num_bytes with
       | 16 | 24 | 32 -> 1
       | _ -> 1 + num_instructions_for_intconst (Nativeint.of_int num_bytes)
       end
-    | Lop (Iintop (Icomp _)) -> 2
-    | Lop (Iintop_imm (Icomp _, _)) -> 2
-    | Lop (Iintop (Icheckbound _)) -> 2
-    | Lop (Ispecific (Ifar_intop_checkbound _)) -> 3
-    | Lop (Iintop_imm (Icheckbound _, _)) -> 2
-    | Lop (Ispecific (Ifar_intop_imm_checkbound _)) -> 3
-    | Lop (Ispecific (Ishiftcheckbound _)) -> 2
-    | Lop (Ispecific (Ifar_shiftcheckbound _)) -> 3
-    | Lop (Iintop Imod) -> 2
-    | Lop (Iintop Imulh) -> 1
-    | Lop (Iintop _) -> 1
-    | Lop (Iintop_imm _) -> 1
-    | Lop (Ifloatofint | Iintoffloat | Iabsf | Inegf | Ispecific Isqrtf) -> 1
-    | Lop (Iaddf | Isubf | Imulf | Idivf | Ispecific Inegmulf) -> 1
-    | Lop (Ispecific (Imuladdf | Inegmuladdf | Imulsubf | Inegmulsubf)) -> 1
-    | Lop (Ispecific (Ishiftarith _)) -> 1
-    | Lop (Ispecific (Imuladd | Imulsub)) -> 1
-    | Lop (Ispecific (Ibswap 16)) -> 2
-    | Lop (Ispecific (Ibswap _)) -> 1
-    | Lop (Iname_for_debugger _) -> 0
+    | Lop (Iintop (Icomp _), _) -> 2
+    | Lop (Iintop_imm (Icomp _, _), _) -> 2
+    | Lop (Iintop (Icheckbound _), _) -> 2
+    | Lop (Ispecific (Ifar_intop_checkbound _), _) -> 3
+    | Lop (Iintop_imm (Icheckbound _, _), _) -> 2
+    | Lop (Ispecific (Ifar_intop_imm_checkbound _), _) -> 3
+    | Lop (Ispecific (Ishiftcheckbound _), _) -> 2
+    | Lop (Ispecific (Ifar_shiftcheckbound _), _) -> 3
+    | Lop (Iintop Imod, _) -> 2
+    | Lop (Iintop Imulh, _) -> 1
+    | Lop (Iintop _, _) -> 1
+    | Lop (Iintop_imm _, _) -> 1
+    | Lop ((Ifloatofint | Iintoffloat | Iabsf | Inegf | Ispecific Isqrtf), _) -> 1
+    | Lop ((Iaddf | Isubf | Imulf | Idivf | Ispecific Inegmulf), _) -> 1
+    | Lop (Ispecific (Imuladdf | Inegmuladdf | Imulsubf | Inegmulsubf), _) -> 1
+    | Lop (Ispecific (Ishiftarith _), _) -> 1
+    | Lop (Ispecific (Imuladd | Imulsub), _) -> 1
+    | Lop (Ispecific (Ibswap 16), _) -> 2
+    | Lop (Ispecific (Ibswap _), _) -> 1
+    | Lop (Iname_for_debugger _, _) -> 0
     | Lreloadretaddr -> 0
     | Lreturn -> epilogue_size ()
     | Llabel _ -> 0
@@ -504,26 +504,27 @@ module BR = Branch_relaxation.Make (struct
     | Lentertrap -> 0
     | Ladjust_trap_depth _ -> 0
     | Lpushtrap _ -> 4
-    | Lpoptrap -> 1
-    | Lraise k ->
-      begin match k with
+    | Lpoptrap _ -> 1
+    | Lraise { kind; _ } ->
+      begin match kind with
       | Lambda.Raise_regular -> 2
       | Lambda.Raise_reraise -> 1
       | Lambda.Raise_notrace -> 4
       end
 
-  let relax_allocation ~num_bytes ~label_after_call_gc ~dbginfo =
-    Lop (Ispecific (Ifar_alloc { bytes = num_bytes; label_after_call_gc; dbginfo }))
+  let relax_allocation ~num_bytes ~label_after_call_gc ~dbginfo ~handler =
+    Lop (Ispecific (Ifar_alloc { bytes = num_bytes; label_after_call_gc; dbginfo }), handler)
 
-  let relax_intop_checkbound ~label_after_error =
-    Lop (Ispecific (Ifar_intop_checkbound { label_after_error; }))
+  let relax_intop_checkbound ~label_after_error ~handler =
+    Lop (Ispecific (Ifar_intop_checkbound { label_after_error; }), handler)
 
-  let relax_intop_imm_checkbound ~bound ~label_after_error =
-    Lop (Ispecific (Ifar_intop_imm_checkbound { bound; label_after_error; }))
+  let relax_intop_imm_checkbound ~bound ~label_after_error ~handler =
+    Lop (Ispecific (Ifar_intop_imm_checkbound { bound; label_after_error; }), handler)
 
-  let relax_specific_op = function
+  let relax_specific_op op ~handler =
+    match op with
     | Ishiftcheckbound { shift; label_after_error; } ->
-      Lop (Ispecific (Ifar_shiftcheckbound { shift; label_after_error; }))
+      Lop (Ispecific (Ifar_shiftcheckbound { shift; label_after_error; }), handler)
     | _ -> assert false
 end)
 
@@ -591,7 +592,7 @@ let emit_instr i =
         cfi_offset ~reg:30 (* return address *) ~offset:(-8);
         `	str	x30, [sp, #{emit_int (n-8)}]\n`
       end
-    | Lop(Imove | Ispill | Ireload) ->
+    | Lop((Imove | Ispill | Ireload), _) ->
         let src = i.arg.(0) and dst = i.res.(0) in
         if src.loc <> dst.loc then begin
           match (src, dst) with
@@ -606,9 +607,9 @@ let emit_instr i =
           | _ ->
               assert false
         end
-    | Lop(Iconst_int n) ->
+    | Lop(Iconst_int n, _) ->
         emit_intconst i.res.(0) n
-    | Lop(Iconst_float f) ->
+    | Lop(Iconst_float f, _) ->
         if f = 0L then
           `	fmov	{emit_reg i.res.(0)}, xzr\n`
         else if is_immediate_float f then
@@ -618,32 +619,32 @@ let emit_instr i =
           `	adrp	{emit_reg reg_tmp1}, {emit_label lbl}\n`;
           `	ldr	{emit_reg i.res.(0)}, [{emit_reg reg_tmp1}, #:lo12:{emit_label lbl}]\n`
         end
-    | Lop(Iconst_symbol s) ->
+    | Lop(Iconst_symbol s, _) ->
         emit_load_symbol_addr i.res.(0) s
-    | Lop(Icall_ind { label_after; }) ->
+    | Lop(Icall_ind { label_after; }, _) ->
         `	blr	{emit_reg i.arg.(0)}\n`;
         `{record_frame i.live (Dbg_other i.dbg) ~label:label_after}\n`
-    | Lop(Icall_imm { func; label_after; }) ->
+    | Lop(Icall_imm { func; label_after; }, _) ->
         `	bl	{emit_symbol func}\n`;
         `{record_frame i.live (Dbg_other i.dbg) ~label:label_after}\n`
-    | Lop(Itailcall_ind { label_after = _; }) ->
+    | Lop(Itailcall_ind { label_after = _; }, _) ->
         output_epilogue (fun () -> `	br	{emit_reg i.arg.(0)}\n`)
-    | Lop(Itailcall_imm { func; label_after = _; }) ->
+    | Lop(Itailcall_imm { func; label_after = _; }, _) ->
         if func = !function_name then
           `	b	{emit_label !tailrec_entry_point}\n`
         else
           output_epilogue (fun () -> `	b	{emit_symbol func}\n`)
-    | Lop(Iextcall { func; alloc = false; label_after = _; }) ->
+    | Lop(Iextcall { func; alloc = false; label_after = _; }, _) ->
         `	bl	{emit_symbol func}\n`
-    | Lop(Iextcall { func; alloc = true; label_after; }) ->
+    | Lop(Iextcall { func; alloc = true; label_after; }, _) ->
         emit_load_symbol_addr reg_x15 func;
         `	bl	{emit_symbol "caml_c_call"}\n`;
         `{record_frame i.live (Dbg_other i.dbg) ~label:label_after}\n`
-    | Lop(Istackoffset n) ->
+    | Lop(Istackoffset n, _) ->
         assert (n mod 16 = 0);
         emit_stack_adjustment (-n);
         stack_offset := !stack_offset + n
-    | Lop(Iload(size, addr)) ->
+    | Lop(Iload(size, addr), _) ->
         let dst = i.res.(0) in
         let base =
           match addr with
@@ -671,7 +672,7 @@ let emit_instr i =
         | Word_int | Word_val | Double | Double_u ->
             `	ldr	{emit_reg dst}, {emit_addressing addr base}\n`
         end
-    | Lop(Istore(size, addr, _)) ->
+    | Lop(Istore(size, addr, _), _) ->
         let src = i.arg.(0) in
         let base =
           match addr with
@@ -693,62 +694,62 @@ let emit_instr i =
         | Word_int | Word_val | Double | Double_u ->
             `	str	{emit_reg src}, {emit_addressing addr base}\n`
         end
-    | Lop(Ialloc { bytes = n; label_after_call_gc; dbginfo }) ->
+    | Lop(Ialloc { bytes = n; label_after_call_gc; dbginfo }, _) ->
         assembly_code_for_allocation i ~n ~far:false ~label_after_call_gc ~dbginfo
-    | Lop(Ispecific (Ifar_alloc { bytes = n; label_after_call_gc; dbginfo })) ->
+    | Lop(Ispecific (Ifar_alloc { bytes = n; label_after_call_gc; dbginfo }), _) ->
         assembly_code_for_allocation i ~n ~far:true ~label_after_call_gc ~dbginfo
-    | Lop(Iintop(Icomp cmp)) ->
+    | Lop(Iintop(Icomp cmp), _) ->
         `	cmp	{emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`;
         `	cset	{emit_reg i.res.(0)}, {emit_string (name_for_comparison cmp)}\n`
-    | Lop(Iintop_imm(Icomp cmp, n)) ->
+    | Lop(Iintop_imm(Icomp cmp, n), _) ->
         `	cmp	{emit_reg i.arg.(0)}, #{emit_int n}\n`;
         `	cset	{emit_reg i.res.(0)}, {emit_string (name_for_comparison cmp)}\n`
-    | Lop(Iintop (Icheckbound { label_after_error; })) ->
+    | Lop(Iintop (Icheckbound { label_after_error; }), _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         `	cmp	{emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`;
         `	b.ls	{emit_label lbl}\n`
-    | Lop(Ispecific Ifar_intop_checkbound { label_after_error; }) ->
+    | Lop(Ispecific Ifar_intop_checkbound { label_after_error; }, _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         let lbl2 = new_label () in
         `	cmp	{emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`;
         `	b.hi	{emit_label lbl2}\n`;
         `	b	{emit_label lbl}\n`;
         `{emit_label lbl2}:\n`;
-    | Lop(Iintop_imm(Icheckbound { label_after_error; }, n)) ->
+    | Lop(Iintop_imm(Icheckbound { label_after_error; }, n), _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         `	cmp	{emit_reg i.arg.(0)}, #{emit_int n}\n`;
         `	b.ls	{emit_label lbl}\n`
     | Lop(Ispecific(
-          Ifar_intop_imm_checkbound { bound; label_after_error; })) ->
+          Ifar_intop_imm_checkbound { bound; label_after_error; }), _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         let lbl2 = new_label () in
         `	cmp	{emit_reg i.arg.(0)}, #{emit_int bound}\n`;
         `	b.hi	{emit_label lbl2}\n`;
         `	b	{emit_label lbl}\n`;
         `{emit_label lbl2}:\n`;
-    | Lop(Ispecific(Ishiftcheckbound { shift; label_after_error; })) ->
+    | Lop(Ispecific(Ishiftcheckbound { shift; label_after_error; }), _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         `	cmp	{emit_reg i.arg.(1)}, {emit_reg i.arg.(0)}, lsr #{emit_int shift}\n`;
         `	b.cs	{emit_label lbl}\n`
-    | Lop(Ispecific(Ifar_shiftcheckbound { shift; label_after_error; })) ->
+    | Lop(Ispecific(Ifar_shiftcheckbound { shift; label_after_error; }), _) ->
         let lbl = bound_error_label i.dbg ?label:label_after_error in
         let lbl2 = new_label () in
         `	cmp	{emit_reg i.arg.(1)}, {emit_reg i.arg.(0)}, lsr #{emit_int shift}\n`;
         `	b.lo	{emit_label lbl2}\n`;
         `	b	{emit_label lbl}\n`;
         `{emit_label lbl2}:\n`;
-    | Lop(Iintop Imod) ->
+    | Lop(Iintop Imod, _) ->
         `	sdiv	{emit_reg reg_tmp1}, {emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`;
         `	msub	{emit_reg i.res.(0)}, {emit_reg reg_tmp1}, {emit_reg i.arg.(1)}, {emit_reg i.arg.(0)}\n`
-    | Lop(Iintop Imulh) ->
+    | Lop(Iintop Imulh, _) ->
         `	smulh	{emit_reg i.res.(0)}, {emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`
-    | Lop(Iintop op) ->
+    | Lop(Iintop op, _) ->
         let instr = name_for_int_operation op in
         `	{emit_string instr}     {emit_reg i.res.(0)}, {emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`
-    | Lop(Iintop_imm(op, n)) ->
+    | Lop(Iintop_imm(op, n), _) ->
         let instr = name_for_int_operation op in
         `	{emit_string instr}     {emit_reg i.res.(0)}, {emit_reg i.arg.(0)}, #{emit_int n}\n`
-    | Lop(Ifloatofint | Iintoffloat | Iabsf | Inegf | Ispecific Isqrtf as op) ->
+    | Lop((Ifloatofint | Iintoffloat | Iabsf | Inegf | Ispecific Isqrtf as op), _) ->
         let instr = (match op with
                      | Ifloatofint      -> "scvtf"
                      | Iintoffloat      -> "fcvtzs"
@@ -757,7 +758,7 @@ let emit_instr i =
                      | Ispecific Isqrtf -> "fsqrt"
                      | _                -> assert false) in
         `	{emit_string instr}	{emit_reg i.res.(0)}, {emit_reg i.arg.(0)}\n`
-    | Lop(Iaddf | Isubf | Imulf | Idivf | Ispecific Inegmulf as op) ->
+    | Lop((Iaddf | Isubf | Imulf | Idivf | Ispecific Inegmulf as op, _)) ->
         let instr = (match op with
                      | Iaddf              -> "fadd"
                      | Isubf              -> "fsub"
@@ -766,7 +767,7 @@ let emit_instr i =
                      | Ispecific Inegmulf -> "fnmul"
                      | _                  -> assert false) in
         `	{emit_string instr}	{emit_reg i.res.(0)}, {emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}\n`
-    | Lop(Ispecific(Imuladdf | Inegmuladdf | Imulsubf | Inegmulsubf as op)) ->
+    | Lop((Ispecific(Imuladdf | Inegmuladdf | Imulsubf | Inegmulsubf as op), _)) ->
         let instr = (match op with
                      | Imuladdf    -> "fmadd"
                      | Inegmuladdf -> "fnmadd"
@@ -774,7 +775,7 @@ let emit_instr i =
                      | Inegmulsubf -> "fnmsub"
                      | _ -> assert false) in
         `	{emit_string instr}	{emit_reg i.res.(0)}, {emit_reg i.arg.(1)}, {emit_reg i.arg.(2)}, {emit_reg i.arg.(0)}\n`
-    | Lop(Ispecific(Ishiftarith(op, shift))) ->
+    | Lop((Ispecific(Ishiftarith(op, shift)), _)) ->
         let instr = (match op with
                        Ishiftadd    -> "add"
                      | Ishiftsub    -> "sub") in
@@ -782,13 +783,13 @@ let emit_instr i =
         if shift >= 0
         then `, lsl #{emit_int shift}\n`
         else `, asr #{emit_int (-shift)}\n`
-    | Lop(Ispecific(Imuladd | Imulsub as op)) ->
+    | Lop((Ispecific(Imuladd | Imulsub as op), _)) ->
         let instr = (match op with
                        Imuladd -> "madd"
                      | Imulsub -> "msub"
                      | _ -> assert false) in
         `	{emit_string instr}	{emit_reg i.res.(0)}, {emit_reg i.arg.(0)}, {emit_reg i.arg.(1)}, {emit_reg i.arg.(2)}\n`
-    | Lop(Ispecific(Ibswap size)) ->
+    | Lop(Ispecific(Ibswap size), _) ->
         begin match size with
         | 16 ->
             `	rev16	{emit_wreg i.res.(0)}, {emit_wreg i.arg.(0)}\n`;
@@ -800,7 +801,7 @@ let emit_instr i =
         | _ ->
             assert false
         end
-    | Lop (Iname_for_debugger _) -> ()
+    | Lop (Iname_for_debugger _, _) -> ()
     | Lreloadretaddr ->
         ()
     | Lreturn ->
@@ -892,12 +893,12 @@ let emit_instr i =
         `	str	{emit_reg reg_tmp1}, [sp, #8]\n`;
         cfi_adjust_cfa_offset 16;
         `	mov	{emit_reg reg_trap_ptr}, sp\n`
-    | Lpoptrap ->
+    | Lpoptrap _ ->
         `	ldr	{emit_reg reg_trap_ptr}, [sp], 16\n`;
         cfi_adjust_cfa_offset (-16);
         stack_offset := !stack_offset - 16
-    | Lraise k ->
-        begin match k with
+    | Lraise { kind; _ } ->
+        begin match kind with
         | Lambda.Raise_regular ->
           let offset = Domainstate.(idx_of_field Domain_backtrace_pos) * 8 in
           `	str	xzr, [{emit_reg reg_domain_state_ptr}, {emit_int offset}]\n`;
@@ -1040,3 +1041,10 @@ let end_assembly () =
       `	.section	.note.GNU-stack,\"\",%progbits\n`
   | _ -> ()
   end
+
+let reference_symbols symbols =
+  ` .data\n`;
+  ` .align 3\n`;
+  List.iter
+    (fun s -> ` .quad {emit_symbol s}\n`)
+    symbols
