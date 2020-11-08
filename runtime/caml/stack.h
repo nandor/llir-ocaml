@@ -75,7 +75,7 @@
 #endif
 
 #ifdef TARGET_llir_arm64
-#define Saved_return_address(sp) *((intnat *)((sp) - 16))
+#define Saved_return_address(sp) *((intnat *)((sp) - 8))
 #endif
 
 #ifdef TARGET_riscv
