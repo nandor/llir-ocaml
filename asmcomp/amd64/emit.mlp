@@ -1096,7 +1096,7 @@ let end_assembly() =
     | S_macosx -> D.section ["__TEXT";"__literal8"] None ["8byte_literals"]
     | S_mingw64 | S_cygwin -> D.section [".rdata"] (Some "dr") []
     | S_win64 -> D.data ()
-    | _ -> D.section [".rodata.cst16"] (Some "aM") ["@progbits";"16"]
+    | _ -> D.section [".rodata.cst8"] (Some "aM") ["@progbits";"8"]
     end;
     List.iter (fun (cst,lbl) -> emit_float_constant cst lbl) !float_constants
   end;
