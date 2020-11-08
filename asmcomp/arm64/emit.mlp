@@ -1043,8 +1043,11 @@ let end_assembly () =
   end
 
 let reference_symbols symbols =
-  ` .data\n`;
-  ` .align 3\n`;
-  List.iter
-    (fun s -> ` .quad {emit_symbol s}\n`)
-    symbols
+  match symbols with
+  | [] -> ()
+  | _ ->
+    ` .data\n`;
+    ` .align 3\n`;
+    List.iter
+      (fun s -> ` .quad {emit_symbol s}\n`)
+      symbols
