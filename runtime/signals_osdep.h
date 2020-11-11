@@ -324,6 +324,8 @@
 
 #elif defined(TARGET_power) && defined(SYS_elf)
 
+  #include <sys/user.h>
+
   #define DECLARE_SIGNAL_HANDLER(name) \
     static void name(int sig, struct sigcontext * context)
 
