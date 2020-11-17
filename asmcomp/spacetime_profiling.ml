@@ -105,6 +105,7 @@ let code_for_function_prologue ~function_name ~fun_dbg:dbg ~node_hole =
         Cop (Cand, [Cvar node; cconst_int 1], dbg),
         Cifthenelse (
           Cop (Ccmpi Cne, [Cvar must_allocate_node; cconst_int 1], dbg),
+          None,
           dbg,
           Cvar node,
           dbg,
@@ -123,6 +124,7 @@ let code_for_function_prologue ~function_name ~fun_dbg:dbg ~node_hole =
                 else
                   Cifthenelse (
                     Cop (Ccmpi Ceq, [Cvar is_new_node; cconst_int 0], dbg),
+                    None,
                     dbg,
                     Cvar new_node,
                     dbg,
@@ -171,6 +173,7 @@ let code_for_blockheader ~value's_header ~node ~dbg =
       Clet (VP.create profinfo,
         Cifthenelse (
           Cop (Ccmpi Cne, [Cvar existing_profinfo; cconst_int 1 (* () *)], dbg),
+          None,
           dbg,
           Cvar existing_profinfo,
           dbg,

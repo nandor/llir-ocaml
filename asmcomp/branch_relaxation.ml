@@ -58,7 +58,7 @@ module Make (T : Branch_relaxation_intf.S) = struct
            by these instructions only branch forward.  We further assume
            that any of these may branch to an out-of-line code block. *)
         code_size + max_out_of_line_code_offset - pc >= max_branch_offset
-      | Lcondbranch (_, lbl) ->
+      | Lcondbranch (_, _, lbl) ->
         branch_overflows map pc lbl max_branch_offset
       | Lcondbranch3 (lbl0, lbl1, lbl2) ->
         opt_branch_overflows map pc lbl0 max_branch_offset
@@ -72,7 +72,7 @@ module Make (T : Branch_relaxation_intf.S) = struct
       match lbl with
       | None -> next
       | Some l ->
-        instr_cons (Lcondbranch (Iinttest_imm (Isigned Cmm.Ceq, n), l))
+        instr_cons (Lcondbranch (Iinttest_imm (Isigned Cmm.Ceq, n), None, l))
           arg [||] next
     in
     let rec fixup did_fix pc instr =
@@ -100,13 +100,13 @@ module Make (T : Branch_relaxation_intf.S) = struct
           | Lop (Ispecific specific, handler) ->
             instr.desc <- T.relax_specific_op specific ~handler;
             fixup true (pc + T.instr_size instr.desc) instr.next
-          | Lcondbranch (test, lbl) ->
+          | Lcondbranch (test, p, lbl) ->
             let lbl2 = Cmm.new_label() in
             let cont =
               instr_cons (Lbranch lbl) [||] [||]
                 (instr_cons (Llabel lbl2) [||] [||] instr.next)
             in
-            instr.desc <- Lcondbranch (invert_test test, lbl2);
+            instr.desc <- Lcondbranch (invert_test test, p, lbl2);
             instr.next <- cont;
             fixup true (pc + T.instr_size instr.desc) instr.next
           | Lcondbranch3 (lbl0, lbl1, lbl2) ->

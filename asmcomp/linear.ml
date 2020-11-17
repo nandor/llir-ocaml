@@ -33,7 +33,7 @@ and instruction_desc =
   | Lreturn
   | Llabel of label
   | Lbranch of label
-  | Lcondbranch of Mach.test * label
+  | Lcondbranch of Mach.test * float option * label
   | Lcondbranch3 of label option * label option * label option
   | Lswitch of label array
   | Lentertrap

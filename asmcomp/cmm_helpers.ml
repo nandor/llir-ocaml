@@ -244,7 +244,7 @@ let mk_if_then_else dbg cond ifso_dbg ifso ifnot_dbg ifnot =
   | Cconst_int (0, _) -> ifnot
   | Cconst_int (1, _) -> ifso
   | _ ->
-    Cifthenelse(cond, ifso_dbg, ifso, ifnot_dbg, ifnot, dbg)
+    Cifthenelse(cond, None, ifso_dbg, ifso, ifnot_dbg, ifnot, dbg)
 
 let mk_not dbg cmm =
   match cmm with
@@ -458,6 +458,7 @@ let rec div_int c1 c2 is_safe dbg =
       bind "divisor" c2 (fun c2 ->
         bind "dividend" c1 (fun c1 ->
           Cifthenelse(c2,
+                      Some 0.9,
                       dbg,
                       Cop(Cdivi, [c1; c2], dbg),
                       dbg,
@@ -498,6 +499,7 @@ let mod_int c1 c2 is_safe dbg =
       bind "divisor" c2 (fun c2 ->
         bind "dividend" c1 (fun c1 ->
           Cifthenelse(c2,
+                      Some 0.9,
                       dbg,
                       Cop(Cmodi, [c1; c2], dbg),
                       dbg,
@@ -521,6 +523,7 @@ let safe_divmod_bi mkop is_safe mkm1 c1 c2 bi dbg =
     && not (is_different_from (-1) c2)
     then
       Cifthenelse(Cop(Ccmpi Cne, [c2; Cconst_int (-1, dbg)], dbg),
+        Some 0.,
         dbg, c,
         dbg, mkm1 c1 dbg,
         dbg)
@@ -586,8 +589,8 @@ let rec remove_unit = function
   | Csequence(c, Cconst_pointer (1, _)) -> c
   | Csequence(c1, c2) ->
       Csequence(c1, remove_unit c2)
-  | Cifthenelse(cond, ifso_dbg, ifso, ifnot_dbg, ifnot, dbg) ->
-      Cifthenelse(cond,
+  | Cifthenelse(cond, p, ifso_dbg, ifso, ifnot_dbg, ifnot, dbg) ->
+      Cifthenelse(cond, p,
         ifso_dbg, remove_unit ifso,
         ifnot_dbg,
         remove_unit ifnot, dbg)
@@ -1505,7 +1508,7 @@ struct
   let make_isout h arg = Cop (Ccmpa Clt, [h ; arg], Debuginfo.none)
   let make_isin h arg = Cop (Ccmpa Cge, [h ; arg], Debuginfo.none)
   let make_if cond ifso ifnot =
-    Cifthenelse (cond, Debuginfo.none, ifso, Debuginfo.none, ifnot,
+    Cifthenelse (cond, None, Debuginfo.none, ifso, Debuginfo.none, ifnot,
       Debuginfo.none)
   let make_switch dbg arg cases actions =
     let actions = Array.map (fun expr -> expr, dbg) actions in
@@ -1745,11 +1748,13 @@ let cache_public_method meths tag cache dbg =
                           [meths; lsl_const (Cvar mi) log2_size_addr dbg],
                           dbg)],
                      dbg)], dbg),
+           None,
            dbg, Cassign(hi, Cop(Csubi, [Cvar mi; cconst_int 2], dbg)),
            dbg, Cassign(li, Cvar mi),
            dbg),
         Cifthenelse
           (Cop(Ccmpi Cge, [Cvar li; Cvar hi], dbg),
+           None,
            dbg, Cexit (raise_num, []),
            dbg, Ctuple [],
            dbg))))
@@ -1805,6 +1810,7 @@ let apply_function_body arity =
    Cifthenelse(
    Cop(Ccmpi Ceq, [get_field_gen Asttypes.Mutable (Cvar clos) 1 (dbg ());
                    int_const (dbg ()) arity], dbg ()),
+   Some 0.9,
    dbg (),
    Cop(Capply typ_val,
        get_field_gen Asttypes.Mutable (Cvar clos) 2 (dbg ())
@@ -1839,6 +1845,7 @@ let send_function arity =
     Clet (
     VP.create real,
     Cifthenelse(Cop(Ccmpa Cne, [tag'; tag], dbg ()),
+                Some 0.,
                 dbg (),
                 cache_public_method (Cvar meths) tag cache (dbg ()),
                 dbg (),
@@ -2121,6 +2128,7 @@ let arraylength kind arg dbg =
         else
           bind "header" hdr (fun hdr ->
               Cifthenelse(is_addr_array_hdr hdr dbg,
+                          None,
                           dbg,
                           Cop(Clsr,
                             [hdr; Cconst_int (wordsize_shift, dbg)], dbg),
@@ -2293,6 +2301,7 @@ let arrayref_unsafe kind arg1 arg2 dbg =
       bind "arr" arg1 (fun arr ->
         bind "index" arg2 (fun idx ->
           Cifthenelse(is_addr_array_ptr arr dbg,
+                      None,
                       dbg,
                       addr_array_ref arr idx dbg,
                       dbg,
@@ -2316,6 +2325,7 @@ let arrayref_safe kind arg1 arg2 dbg =
           Csequence(
             make_checkbound dbg [addr_array_length_shifted hdr dbg; idx],
             Cifthenelse(is_addr_array_hdr hdr dbg,
+                        None,
                         dbg,
                         addr_array_ref arr idx dbg,
                         dbg,
@@ -2323,6 +2333,7 @@ let arrayref_safe kind arg1 arg2 dbg =
                         dbg))
         else
           Cifthenelse(is_addr_array_hdr hdr dbg,
+            None,
             dbg,
             Csequence(
               make_checkbound dbg [addr_array_length_shifted hdr dbg; idx],
@@ -2394,6 +2405,7 @@ let arrayset_unsafe kind arg1 arg2 arg3 dbg =
         bind "index" arg2 (fun index ->
           bind "arr" arg1 (fun arr ->
             Cifthenelse(is_addr_array_ptr arr dbg,
+                        None,
                         dbg,
                         addr_array_set arr index newval dbg,
                         dbg,
@@ -2419,6 +2431,7 @@ let arrayset_safe kind arg1 arg2 arg3 dbg =
           Csequence(
             make_checkbound dbg [addr_array_length_shifted hdr dbg; idx],
             Cifthenelse(is_addr_array_hdr hdr dbg,
+                        None,
                         dbg,
                         addr_array_set arr idx newval dbg,
                         dbg,
@@ -2429,6 +2442,7 @@ let arrayset_safe kind arg1 arg2 arg3 dbg =
         else
           Cifthenelse(
             is_addr_array_hdr hdr dbg,
+            None,
             dbg,
             Csequence(
               make_checkbound dbg [addr_array_length_shifted hdr dbg; idx],

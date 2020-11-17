@@ -220,6 +220,15 @@ let fundecl f =
     state_fields |> List.iter (fun (_, reg) -> `, {emit_temp reg}`);
   in
 
+  let emit_prob p br =
+    match p with
+    | None -> ()
+    | Some f ->
+      let num = int_of_float (f *. 1000.) in
+      let n = if br then num else 1000 - num in
+      ` @probability({emit_int n} 1000)`
+  in
+
   let emit_op arg res handler dbg = function
     | Ispill
     | Ireload
@@ -429,21 +438,21 @@ let fundecl f =
       `{emit_label label}:\n`
     | Lbranch(label) ->
       `  jmp {emit_label label}\n`
-    | Lcondbranch(test, label) ->
+    | Lcondbranch(test, p, label) ->
       (match test with
       | Itruetest ->
-        `  jt {emit_reg arg.(0)}, {emit_label label}\n`
+        `  jt {emit_reg arg.(0)}, {emit_label label}{emit_prob p true}\n`
       | Ifalsetest ->
-        `  jf {emit_reg arg.(0)}, {emit_label label}\n`
+        `  jf {emit_reg arg.(0)}, {emit_label label}{emit_prob p false}\n`
       | Iinttest cc ->
         let flag = make_temp () in
         `  cmp.{emit_cc cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+        `  jt {emit_temp flag}, {emit_label label}{emit_prob p true}\n`
       | Iinttest_imm(cc, n) ->
         let imm = emit_const n in
         let flag = make_temp () in
         `  cmp.{emit_cc cc}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+        `  jt {emit_temp flag}, {emit_label label}{emit_prob p true}\n`
       | Ifloattest(cc) ->
         let cond = match cc with
           | CFeq  -> "oeq"
@@ -459,17 +468,17 @@ let fundecl f =
         in
         let flag = make_temp () in
         `  cmp.{emit_string cond}.i8 {emit_temp flag}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+        `  jt {emit_temp flag}, {emit_label label}{emit_prob p true}\n`
       | Ioddtest ->
         let imm = emit_const 1 in
         let flag = make_temp () in
         `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  jt {emit_temp flag}, {emit_label label}\n`
+        `  jt {emit_temp flag}, {emit_label label}{emit_prob p true}\n`
       | Ieventest ->
         let imm = emit_const 1 in
         let flag = make_temp () in
         `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  jf {emit_temp flag}, {emit_label label}\n`
+        `  jf {emit_temp flag}, {emit_label label}{emit_prob p false}\n`
       );
     | Lcondbranch3(lbl_lt, lbl_eq, lbl_gt) ->
         let imm = emit_const 1 in

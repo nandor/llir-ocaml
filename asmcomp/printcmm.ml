@@ -215,7 +215,7 @@ let rec expr ppf = function
       fprintf ppf ")@]"
   | Csequence(e1, e2) ->
       fprintf ppf "@[<2>(seq@ %a@ %a)@]" sequence e1 sequence e2
-  | Cifthenelse(e1, _e2_dbg, e2, _e3_dbg, e3, _dbg) ->
+  | Cifthenelse(e1, _p, _e2_dbg, e2, _e3_dbg, e3, _dbg) ->
       fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" expr e1 expr e2 expr e3
   | Cswitch(e1, index, cases, _dbg) ->
       let print_case i ppf =

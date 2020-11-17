@@ -132,6 +132,11 @@ let is_next_catch n = match !exit_label with
 let local_exit k =
   snd (find_exit_label_try_depth k) = !try_depth
 
+let invert_prob p =
+  match p with
+  | None -> None
+  | Some f -> Some (1. -. f)
+
 (* Linearize an instruction [i]: add it in front of the continuation [n] *)
 let linear i n contains_calls =
   let rec linear i n lbl_handler =
@@ -152,41 +157,41 @@ let linear i n contains_calls =
         if contains_calls
         then cons_instr Lreloadretaddr n1
         else n1
-    | Iifthenelse(test, ifso, ifnot) ->
+    | Iifthenelse(test, p, ifso, ifnot) ->
         let n1 = linear i.Mach.next n lbl_handler in
         begin match (ifso.Mach.desc, ifnot.Mach.desc, n1.desc) with
           Iend, _, Lbranch lbl ->
-            copy_instr (Lcondbranch(test, lbl)) i (linear ifnot n1 lbl_handler)
+            copy_instr (Lcondbranch(test, p, lbl)) i (linear ifnot n1 lbl_handler)
         | _, Iend, Lbranch lbl ->
-            copy_instr (Lcondbranch(invert_test test, lbl)) i
+            copy_instr (Lcondbranch(invert_test test, invert_prob p, lbl)) i
               (linear ifso n1 lbl_handler)
         | Iexit nfail1, Iexit nfail2, _
               when is_next_catch nfail1 && local_exit nfail2 ->
             let lbl2 = find_exit_label nfail2 in
             copy_instr
-              (Lcondbranch (invert_test test, lbl2)) i
+              (Lcondbranch (invert_test test, invert_prob p, lbl2)) i
               (linear ifso n1 lbl_handler)
         | Iexit nfail, _, _ when local_exit nfail ->
             let n2 = linear ifnot n1 lbl_handler
             and lbl = find_exit_label nfail in
-            copy_instr (Lcondbranch(test, lbl)) i n2
+            copy_instr (Lcondbranch(test, p, lbl)) i n2
         | _,  Iexit nfail, _ when local_exit nfail ->
             let n2 = linear ifso n1 lbl_handler in
             let lbl = find_exit_label nfail in
-            copy_instr (Lcondbranch(invert_test test, lbl)) i n2
+            copy_instr (Lcondbranch(invert_test test, invert_prob p, lbl)) i n2
         | Iend, _, _ ->
             let (lbl_end, n2) = get_label n1 in
-            copy_instr (Lcondbranch(test, lbl_end)) i
+            copy_instr (Lcondbranch(test, p, lbl_end)) i
               (linear ifnot n2 lbl_handler)
         | _,  Iend, _ ->
             let (lbl_end, n2) = get_label n1 in
-            copy_instr (Lcondbranch(invert_test test, lbl_end)) i
+            copy_instr (Lcondbranch(invert_test test, invert_prob p, lbl_end)) i
                        (linear ifso n2 lbl_handler)
         | _, _, _ ->
           (* Should attempt branch prediction here *)
             let (lbl_end, n2) = get_label n1 in
             let (lbl_else, nelse) = get_label (linear ifnot n2 lbl_handler) in
-            copy_instr (Lcondbranch(invert_test test, lbl_else)) i
+            copy_instr (Lcondbranch(invert_test test, invert_prob p, lbl_else)) i
               (linear ifso (add_branch lbl_end nelse) lbl_handler)
         end
     | Iswitch(index, cases) ->

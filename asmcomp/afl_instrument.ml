@@ -57,8 +57,8 @@ let rec with_afl_logging b dbg =
 
 and instrument = function
   (* these cases add logging, as they may be targets of conditional branches *)
-  | Cifthenelse (cond, t_dbg, t, f_dbg, f, dbg) ->
-     Cifthenelse (instrument cond, t_dbg, with_afl_logging t t_dbg,
+  | Cifthenelse (cond, p, t_dbg, t, f_dbg, f, dbg) ->
+     Cifthenelse (instrument cond, p, t_dbg, with_afl_logging t t_dbg,
        f_dbg, with_afl_logging f f_dbg, dbg)
   | Ctrywith (e, ex, handler, dbg) ->
      Ctrywith (instrument e, ex, with_afl_logging handler dbg, dbg)

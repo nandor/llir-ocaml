@@ -188,7 +188,7 @@ let rec instr ppf i =
       operation op i.arg ppf i.res
   | Ireturn ->
       fprintf ppf "return %a" regs i.arg
-  | Iifthenelse(tst, ifso, ifnot) ->
+  | Iifthenelse(tst, _p, ifso, ifnot) ->
       fprintf ppf "@[<v 2>if %a then@,%a" (test tst) i.arg instr ifso;
       begin match ifnot.desc with
       | Iend -> ()

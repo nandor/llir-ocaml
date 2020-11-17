@@ -807,7 +807,7 @@ let emit_instr fallthrough i =
       emit_Llabel fallthrough lbl
   | Lbranch lbl ->
       I.jmp (label lbl)
-  | Lcondbranch(tst, lbl) ->
+  | Lcondbranch(tst, _, lbl) ->
       let lbl = label lbl in
       begin match tst with
       | Itruetest ->

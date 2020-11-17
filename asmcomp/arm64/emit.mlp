@@ -413,13 +413,13 @@ module BR = Branch_relaxation.Make (struct
       (* The various "far" variants in [specific_operation] don't need to
          return [Some] here, since their code sequences never contain any
          conditional branches that might need relaxing. *)
-      | Lcondbranch (Itruetest, _)
-      | Lcondbranch (Ifalsetest, _) -> Some CB
-      | Lcondbranch (Iinttest _, _)
-      | Lcondbranch (Iinttest_imm _, _)
-      | Lcondbranch (Ifloattest _, _) -> Some Bcc
-      | Lcondbranch (Ioddtest, _)
-      | Lcondbranch (Ieventest, _) -> Some TB
+      | Lcondbranch (Itruetest, _, _)
+      | Lcondbranch (Ifalsetest, _, _) -> Some CB
+      | Lcondbranch (Iinttest _, _, _)
+      | Lcondbranch (Iinttest_imm _, _, _)
+      | Lcondbranch (Ifloattest _, _, _) -> Some Bcc
+      | Lcondbranch (Ioddtest, _, _)
+      | Lcondbranch (Ieventest, _, _) -> Some TB
       | Lcondbranch3 _ -> Some Bcc
       | _ -> None
   end

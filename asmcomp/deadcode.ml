@@ -62,11 +62,11 @@ let rec deadcode i =
           exits = s.exits;
         }
       end
-  | Iifthenelse(test, ifso, ifnot) ->
+  | Iifthenelse(test, p, ifso, ifnot) ->
       let ifso' = deadcode ifso in
       let ifnot' = deadcode ifnot in
       let s = deadcode i.next in
-      { i = {i with desc = Iifthenelse(test, ifso'.i, ifnot'.i); next = s.i};
+      { i = {i with desc = Iifthenelse(test, p, ifso'.i, ifnot'.i); next = s.i};
         regs = Reg.add_set_array i.live arg;
         exits = Int.Set.union s.exits
                   (Int.Set.union ifso'.exits ifnot'.exits);

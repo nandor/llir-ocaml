@@ -223,7 +223,7 @@ let rec available_regs (instr : M.instruction)
             avail_across
         in
         Some (ok avail_across), ok avail_after
-      | Iifthenelse (_, ifso, ifnot) -> join [ifso; ifnot] ~avail_before
+      | Iifthenelse (_, _, ifso, ifnot) -> join [ifso; ifnot] ~avail_before
       | Iswitch (_, cases) -> join (Array.to_list cases) ~avail_before
       | Icatch (recursive, handlers, body) ->
         List.iter (fun (nfail, _handler) ->

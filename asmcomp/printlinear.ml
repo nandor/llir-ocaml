@@ -43,7 +43,7 @@ let instr ppf i =
       fprintf ppf "%a:" label lbl
   | Lbranch lbl ->
       fprintf ppf "goto %a" label lbl
-  | Lcondbranch(tst, lbl) ->
+  | Lcondbranch(tst, _p, lbl) ->
       fprintf ppf "if %a goto %a" (test tst) i.arg label lbl
   | Lcondbranch3(lbl0, lbl1, lbl2) ->
       fprintf ppf "switch3 %a" reg i.arg.(0);

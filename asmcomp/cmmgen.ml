@@ -578,6 +578,7 @@ let rec transl env e =
         bind "switch" (transl env arg) (fun arg ->
           Cifthenelse(
           Cop(Cand, [arg; Cconst_int (1, dbg)], dbg),
+          None,
           dbg,
           transl_switch dbg env
             (untag_int arg dbg) s.us_index_consts s.us_actions_consts,
@@ -638,6 +639,7 @@ let rec transl env e =
                 (raise_num, [],
                  Cifthenelse
                    (Cop(Ccmpi tst, [Cvar (VP.var id); high], dbg),
+                    Some 0.8,
                     dbg,
                     Cexit (raise_num, []),
                     dbg,
@@ -652,6 +654,7 @@ let rec transl env e =
                              Cifthenelse
                                (Cop(Ccmpi Ceq, [Cvar (VP.var id_prev); high],
                                   dbg),
+                                Some 0.2,
                                 dbg, Cexit (raise_num,[]),
                                 dbg, Ctuple [],
                                 dbg)))))

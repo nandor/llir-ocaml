@@ -79,7 +79,7 @@ and instruction_desc =
     Iend
   | Iop of operation
   | Ireturn
-  | Iifthenelse of test * instruction * instruction
+  | Iifthenelse of test * float option * instruction * instruction
   | Iswitch of int array * instruction array
   | Icatch of Cmm.rec_flag * (int * instruction) list * instruction
   | Iexit of int
@@ -147,7 +147,7 @@ let rec instr_iter f i =
       match i.desc with
         Iend -> ()
       | Ireturn | Iop(Itailcall_ind _) | Iop(Itailcall_imm _) -> ()
-      | Iifthenelse(_tst, ifso, ifnot) ->
+      | Iifthenelse(_tst, _p, ifso, ifnot) ->
           instr_iter f ifso; instr_iter f ifnot; instr_iter f i.next
       | Iswitch(_index, cases) ->
           for i = 0 to Array.length cases - 1 do

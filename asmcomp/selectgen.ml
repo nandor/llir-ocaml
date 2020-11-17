@@ -360,7 +360,7 @@ method effects_of exp =
   | Cphantom_let (_var, _defining_expr, body) -> self#effects_of body
   | Csequence (e1, e2) ->
     EC.join (self#effects_of e1) (self#effects_of e2)
-  | Cifthenelse (cond, _ifso_dbg, ifso, _ifnot_dbg, ifnot, _dbg) ->
+  | Cifthenelse (cond, _p, _ifso_dbg, ifso, _ifnot_dbg, ifnot, _dbg) ->
     EC.join (self#effects_of cond)
       (EC.join (self#effects_of ifso) (self#effects_of ifnot))
   | Cop (op, args, _) ->
@@ -729,6 +729,7 @@ method emit_expr (env:environment) exp =
   | Cop(Ccmpf _, _, dbg) ->
       self#emit_expr env
         (Cifthenelse (exp,
+          None,
           dbg, Cconst_int (1, dbg),
           dbg, Cconst_int (0, dbg),
           dbg))
@@ -802,7 +803,7 @@ method emit_expr (env:environment) exp =
         None -> None
       | Some _ -> self#emit_expr env e2
       end
-  | Cifthenelse(econd, _ifso_dbg, eif, _ifnot_dbg, eelse, _dbg) ->
+  | Cifthenelse(econd, p, _ifso_dbg, eif, _ifnot_dbg, eelse, _dbg) ->
       let (cond, earg) = self#select_condition econd in
       begin match self#emit_expr env earg with
         None -> None
@@ -810,7 +811,7 @@ method emit_expr (env:environment) exp =
           let (rif, sif) = self#emit_sequence env eif in
           let (relse, selse) = self#emit_sequence env eelse in
           let r = join env rif sif relse selse in
-          self#insert env (Iifthenelse(cond, sif#extract, selse#extract))
+          self#insert env (Iifthenelse(cond, p, sif#extract, selse#extract))
                       rarg [||];
           r
       end
@@ -1157,14 +1158,14 @@ method emit_tail (env:environment) exp =
         None -> ()
       | Some _ -> self#emit_tail env e2
       end
-  | Cifthenelse(econd, _ifso_dbg, eif, _ifnot_dbg, eelse, _dbg) ->
+  | Cifthenelse(econd, p, _ifso_dbg, eif, _ifnot_dbg, eelse, _dbg) ->
       let (cond, earg) = self#select_condition econd in
       begin match self#emit_expr env earg with
         None -> ()
       | Some rarg ->
           self#insert env
-                      (Iifthenelse(cond, self#emit_tail_sequence env eif,
-                                         self#emit_tail_sequence env eelse))
+                      (Iifthenelse(cond, p, self#emit_tail_sequence env eif,
+                                            self#emit_tail_sequence env eelse))
                       rarg [||]
       end
   | Cswitch(esel, index, ecases, _dbg) ->

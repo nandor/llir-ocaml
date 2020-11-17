@@ -144,12 +144,12 @@ let rec rename i sub =
       (instr_cons_debug i.desc (subst_regs i.arg sub) (subst_regs i.res sub)
                         i.dbg new_next,
        sub_next)
-  | Iifthenelse(tst, ifso, ifnot) ->
+  | Iifthenelse(tst, p, ifso, ifnot) ->
       let (new_ifso, sub_ifso) = rename ifso sub in
       let (new_ifnot, sub_ifnot) = rename ifnot sub in
       let (new_next, sub_next) =
         rename i.next (merge_substs sub_ifso sub_ifnot i.next) in
-      (instr_cons (Iifthenelse(tst, new_ifso, new_ifnot))
+      (instr_cons (Iifthenelse(tst, p, new_ifso, new_ifnot))
                   (subst_regs i.arg sub) [||] new_next,
        sub_next)
   | Iswitch(index, cases) ->

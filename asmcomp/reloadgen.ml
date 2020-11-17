@@ -99,11 +99,11 @@ method private reload i =
         {i with arg = newarg; res = newres; next =
           (insert_moves newres i.res
             (self#reload i.next))}
-  | Iifthenelse(tst, ifso, ifnot) ->
+  | Iifthenelse(tst, p, ifso, ifnot) ->
       let newarg = self#reload_test tst i.arg in
       insert_moves i.arg newarg
         (instr_cons
-          (Iifthenelse(tst, self#reload ifso, self#reload ifnot)) newarg [||]
+          (Iifthenelse(tst, p, self#reload ifso, self#reload ifnot)) newarg [||]
           (self#reload i.next))
   | Iswitch(index, cases) ->
       let newarg = self#makeregs i.arg in

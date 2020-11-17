@@ -96,7 +96,7 @@ let build_graph fundecl =
         add_interf_set i.res i.live;
         add_interf_self i.res;
         interf i.next
-    | Iifthenelse(_tst, ifso, ifnot) ->
+    | Iifthenelse(_tst, _p, ifso, ifnot) ->
         interf ifso;
         interf ifnot;
         interf i.next
@@ -166,7 +166,7 @@ let build_graph fundecl =
     | Iop(Itailcall_imm _) -> ()
     | Iop _ ->
         prefer weight i.next
-    | Iifthenelse(_tst, ifso, ifnot) ->
+    | Iifthenelse(_tst, _p, ifso, ifnot) ->
         prefer weight ifso;
         prefer weight ifnot;
         prefer weight i.next

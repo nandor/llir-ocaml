@@ -71,11 +71,11 @@ let rec combine i allocstate =
   | Iop _ ->
       let (newnext, s') = combine i.next allocstate in
       (instr_cons_debug i.desc i.arg i.res i.dbg newnext, s')
-  | Iifthenelse(test, ifso, ifnot) ->
+  | Iifthenelse(test, p, ifso, ifnot) ->
       let newifso = combine_restart ifso in
       let newifnot = combine_restart ifnot in
       let newnext = combine_restart i.next in
-      (instr_cons (Iifthenelse(test, newifso, newifnot)) i.arg i.res newnext,
+      (instr_cons (Iifthenelse(test, p, newifso, newifnot)) i.arg i.res newnext,
        allocstate)
   | Iswitch(table, cases) ->
       let newcases = Array.map combine_restart cases in

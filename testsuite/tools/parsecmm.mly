@@ -228,7 +228,7 @@ expr:
   | LPAREN binaryop expr expr RPAREN { Cop($2, [$3; $4], debuginfo ()) }
   | LPAREN SEQ sequence RPAREN { $3 }
   | LPAREN IF expr expr expr RPAREN
-      { Cifthenelse($3, debuginfo (), $4, debuginfo (), $5, debuginfo ()) }
+      { Cifthenelse($3, None, debuginfo (), $4, debuginfo (), $5, debuginfo ()) }
   | LPAREN SWITCH INTCONST expr caselist RPAREN { make_switch $3 $4 $5 }
   | LPAREN WHILE expr sequence RPAREN
       {
@@ -237,7 +237,7 @@ expr:
         let body =
           match $3 with
             Cconst_int (x, _) when x <> 0 -> $4
-          | _ -> Cifthenelse($3, debuginfo (), $4, debuginfo (),
+          | _ -> Cifthenelse($3, None, debuginfo (), $4, debuginfo (),
                              (Cexit(lbl0,[])),
                              debuginfo ()) in
         Ccatch(Nonrecursive, [lbl0, [], Ctuple [], debuginfo ()],

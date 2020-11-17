@@ -463,7 +463,7 @@ let emit_instr i =
       `{emit_label lbl}:\n`
   | Lbranch lbl ->
       `	j	{emit_label lbl}\n`
-  | Lcondbranch(tst, lbl) ->
+  | Lcondbranch(tst, _, lbl) ->
       begin match tst with
       | Itruetest ->
           `	bnez	{emit_reg i.arg.(0)}, {emit_label lbl}\n`
