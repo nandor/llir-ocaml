@@ -871,7 +871,7 @@ let emit_instr i =
         `{emit_label lbl}:\n`
     | Lbranch lbl ->
         `	b	{emit_label lbl}\n`
-    | Lcondbranch(tst, lbl) ->
+    | Lcondbranch(tst, _, lbl) ->
         begin match tst with
           Itruetest ->
             `	{emit_string cmpg}i	{emit_reg i.arg.(0)}, 0\n`;
