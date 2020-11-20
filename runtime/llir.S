@@ -105,13 +105,28 @@ caml_callback3_asm:
   .globl caml_raise_exn
 caml_raise_exn:
   .call       caml
+#ifdef __llir_x86_64__
   .args       i64, i64, i64
+  arg.i64     $0, 0
+  arg.i64     $1, 1
+  arg.i64     $10, 2
+
+#else
+  .args       i64, i64, i64, i64
+  arg.i64     $0, 0
+  arg.i64     $1, 0
+  arg.i64     $2, 1
+  arg.i64     $10, 3
+
+  # Store the young limit
+  mov.i64     $10, offset_young_limit
+  add.i64     $11, $0, $10
+  st          [$11], $2
+#endif
 
   # Store the young pointer.
-  arg.i64     $0, 0
   mov.i64     $10, offset_young_ptr
   add.i64     $11, $0, $10
-  arg.i64     $1, 1
   st          [$11], $1
 
   # Check if traces are active.
@@ -123,7 +138,6 @@ caml_raise_exn:
   jt          $3, .Lactive.caml_raise_exn
 .Lthrow.caml_raise_exn:
   # Raise the exception here.
-  arg.i64     $10, 2
   mov.i64     $11, offset_exception_value
   add.i64     $11, $11, $0
   st          [$11], $10
@@ -144,8 +158,6 @@ caml_raise_exn:
   st          [$14], $21
   raise.caml  $19, $20
 .Lactive.caml_raise_exn:
-  arg.i64     $10, 2
-
   mov.i64     $11, $ret_addr
   mov.i64     $12, $frame_addr
   mov.i64     $13, offset_exception_pointer
@@ -252,9 +264,17 @@ caml_start_program_helper:
 .Lentry_impl:
   # Prepare arguments.
   arg.i64                   $0, 0                 # Caml_state
+
   mov.i64                   $70, offset_young_ptr # Caml_state->young_ptr
   add.i64                   $19, $0, $70
   ld.i64                    $1, [$19]
+
+#ifdef __x86_64__
+#else
+  mov.i64                   $70, offset_young_limit # Caml_state->young_ptr
+  add.i64                   $19, $0, $70
+  ld.i64                    $2, [$19]
+#endif
 
   # Save global variables.
   frame.i64                 $40, 1, 0
@@ -298,22 +318,37 @@ caml_start_program_helper:
   st                        [$14], $51            # Pointer to this structure.
 
   # Invoke the OCaml program.
-  arg.i64                   $90, 1            # Code pointer
-  arg.i64                   $91, 2            # Arg 0
-  arg.i64                   $92, 3            # Arg 1
-  arg.i64                   $93, 4            # Arg 2
-  arg.i64                   $94, 5            # Arg 3
-  invoke.i64.i64.i64.caml   $80, $81, $82, $90, $0, $1, $91, $92, $93, $94, .Lhandler_impl @caml_frame
+  arg.i64                   $100, 1            # Code pointer
+  arg.i64                   $101, 2            # Arg 0
+  arg.i64                   $102, 3            # Arg 1
+  arg.i64                   $103, 4            # Arg 2
+  arg.i64                   $104, 5            # Arg 3
+#ifdef __x86_64__
+  invoke.i64.i64.i64.caml     $80, $81,      $89, $100, $0, $1,     $101, $102, $103, $104, .Lhandler_impl @caml_frame
+#else
+  invoke.i64.i64.i64.i64.caml $80, $81, $82, $89, $100, $0, $1, $2, $101, $102, $103, $104, .Lhandler_impl @caml_frame
+#endif
 
 .Lreturn_impl:
   phi.i64                   $300, .Lentry_impl, $80, .Lhandler_impl, $400 # Caml_state
   phi.i64                   $301, .Lentry_impl, $81, .Lhandler_impl, $401 # Caml_state->young_ptr
-  phi.i64                   $302, .Lentry_impl, $82, .Lhandler_impl, $402 # return value
+#ifdef __x86_64__
+#else
+  phi.i64                   $302, .Lentry_impl, $82, .Lhandler_impl, $402 # Caml_state->young_limit
+#endif
+  phi.i64                   $350, .Lentry_impl, $89, .Lhandler_impl, $450 # return value
 
   # Save young pointer.
   mov.i64                   $70, offset_young_ptr
   add.i64                   $200, $300, $70
   st.i64                    [$200], $301
+
+#ifdef __x86_64__
+#else
+  mov.i64                   $70, offset_young_limit
+  add.i64                   $200, $300, $70
+  st.i64                    [$200], $302
+#endif
 
   # Restore global variables, popping the handler.
   ld.i64                    $400, [$53]
@@ -329,6 +364,7 @@ caml_start_program_helper:
 
   frame.i64                 $41, 1, 8
   ld.i64                    $400, [$41]
+
   mov.i64                   $70, offset_last_return_address
   add.i64                   $11, $300, $70
   st                        [$11], $400
@@ -345,7 +381,7 @@ caml_start_program_helper:
   add.i64                   $13, $300, $70
   st                        [$13], $400
 
-  ret.i64                   $302
+  ret.i64                   $350
 
 .Lhandler_impl:
   # Exception handler, marks value as exception.
@@ -356,11 +392,18 @@ caml_start_program_helper:
   add.i64                   $200, $0, $70
   ld.i64                    $401, [$200]
 
+#ifdef __x86_64__
+#else
+  mov.i64                   $70, offset_young_limit
+  add.i64                   $200, $0, $70
+  ld.i64                    $402, [$200]
+#endif
+
   mov.i64                   $70, offset_exception_value
   add.i64                   $200, $0, $70
   ld.i64                    $201, [$200]
   mov.i64                   $202, 2
-  or.i64                    $402, $201, $202
+  or.i64                    $450, $201, $202
 
   jmp                       .Lreturn_impl
   .end
@@ -371,26 +414,49 @@ caml_start_program_helper:
 caml_alloc1:
   .visibility             global_default
   .call caml_alloc
+#ifdef __llir_x86_64__
   .args                   i64, i64
 
   arg.i64                 $0, 0       # Caml_state
   arg.i64                 $1, 1       # Caml_state->young_ptr
 
-  mov.i64                 $2, 8
-  add.i64                 $3, $0, $2
-  ld.i64                  $4, [$3]    # Caml_state->young_limit
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+  ld.i64                  $2, [$101]    # Caml_state->young_limit
 
-  mov.i64                 $5, 16
-  sub.i64                 $6, $1, $5
+  mov.i64                 $102, 16
+  sub.i64                 $103, $1, $102
 
-  cmp.i8.uge              $7, $6, $4
-  jcc                     $7, .Lno_gc_alloc1, .Lgc_alloc1
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc1, .Lgc_alloc1
 .Lgc_alloc1:
-  mov.i64                 $8, caml_call_gc
-  tcall.i64.i64.caml_gc   $8, $0, $6
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103
 .Lno_gc_alloc1:
-  ret                     $0, $6
+  ret                     $0, $103
   .end
+#else
+  .args                   i64, i64, i64
+
+  arg.i64                 $0, 0       # Caml_state
+  arg.i64                 $1, 1       # Caml_state->young_ptr
+  arg.i64                 $2, 2       # Caml_state->young_limit
+
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+
+  mov.i64                 $102, 16
+  sub.i64                 $103, $1, $102
+
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc1, .Lgc_alloc1
+.Lgc_alloc1:
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103, $2
+.Lno_gc_alloc1:
+  ret                     $0, $103, $2
+  .end
+#endif
 
 ################################################################################
 # caml_alloc2
@@ -398,26 +464,49 @@ caml_alloc1:
 caml_alloc2:
   .visibility             global_default
   .call caml_alloc
+#ifdef __llir_x86_64__
   .args                   i64, i64
 
   arg.i64                 $0, 0       # Caml_state
   arg.i64                 $1, 1       # Caml_state->young_ptr
 
-  mov.i64                 $2, 8
-  add.i64                 $3, $0, $2
-  ld.i64                  $4, [$3]    # Caml_state->young_limit
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+  ld.i64                  $2, [$101]    # Caml_state->young_limit
 
-  mov.i64                 $5, 24
-  sub.i64                 $6, $1, $5
+  mov.i64                 $102, 24
+  sub.i64                 $103, $1, $102
 
-  cmp.i8.uge              $7, $6, $4
-  jcc                     $7, .Lno_gc_alloc2, .Lgc_alloc2
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc2, .Lgc_alloc2
 .Lgc_alloc2:
-  mov.i64                 $8, caml_call_gc
-  tcall.i64.i64.caml_gc   $8, $0, $6
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103
 .Lno_gc_alloc2:
-  ret                     $0, $6
+  ret                     $0, $103
   .end
+#else
+  .args                   i64, i64, i64
+
+  arg.i64                 $0, 0       # Caml_state
+  arg.i64                 $1, 1       # Caml_state->young_ptr
+  arg.i64                 $2, 2       # Caml_state->young_limit
+
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+
+  mov.i64                 $102, 24
+  sub.i64                 $103, $1, $102
+
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc2, .Lgc_alloc2
+.Lgc_alloc2:
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103, $2
+.Lno_gc_alloc2:
+  ret                     $0, $103, $2
+  .end
+#endif
 
 ################################################################################
 # caml_alloc3
@@ -425,26 +514,49 @@ caml_alloc2:
 caml_alloc3:
   .visibility             global_default
   .call caml_alloc
+#ifdef __llir_x86_64__
   .args                   i64, i64
 
   arg.i64                 $0, 0       # Caml_state
   arg.i64                 $1, 1       # Caml_state->young_ptr
 
-  mov.i64                 $2, 8
-  add.i64                 $3, $0, $2
-  ld.i64                  $4, [$3]    # Caml_state->young_limit
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+  ld.i64                  $2, [$101]    # Caml_state->young_limit
 
-  mov.i64                 $5, 32
-  sub.i64                 $6, $1, $5
+  mov.i64                 $102, 32
+  sub.i64                 $103, $1, $102
 
-  cmp.i8.uge              $7, $6, $4
-  jcc                     $7, .Lno_gc_alloc3, .Lgc_alloc3
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc3, .Lgc_alloc3
 .Lgc_alloc3:
-  mov.i64                 $8, caml_call_gc
-  tcall.i64.i64.caml_gc   $8, $0, $6
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103
 .Lno_gc_alloc3:
-  ret                     $0, $6
+  ret                     $0, $103
   .end
+#else
+  .args                   i64, i64, i64
+
+  arg.i64                 $0, 0       # Caml_state
+  arg.i64                 $1, 1       # Caml_state->young_ptr
+  arg.i64                 $2, 2       # Caml_state->young_limit
+
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+
+  mov.i64                 $102, 32
+  sub.i64                 $103, $1, $102
+
+  cmp.i8.uge              $104, $103, $2
+  jcc                     $104, .Lno_gc_alloc3, .Lgc_alloc3
+.Lgc_alloc3:
+  mov.i64                 $105, caml_call_gc
+  tcall.i64.i64.caml_gc   $105, $0, $103, $2
+.Lno_gc_alloc3:
+  ret                     $0, $103, $2
+  .end
+#endif
 
 ################################################################################
 # caml_allocN
@@ -452,23 +564,40 @@ caml_alloc3:
 caml_allocN:
   .visibility             global_default
   .call                   caml_alloc
+#ifdef __llir_x86_64__
   .args                   i64, i64
 
   arg.i64                 $0, 0       # Caml_state
   arg.i64                 $1, 1       # Caml_state->young_ptr
 
-  mov.i64                 $2, 8
-  add.i64                 $3, $0, $2
-  ld.i64                  $4, [$3]    # Caml_state->young_limit
+  mov.i64                 $100, 8
+  add.i64                 $101, $0, $100
+  ld.i64                  $2, [$101]    # Caml_state->young_limit
 
-  cmp.i8.uge              $7, $1, $4
-  jcc                     $7, .Lno_gc_allocN, .Lgc_allocN
+  cmp.i8.uge              $102, $1, $2
+  jcc                     $102, .Lno_gc_allocN, .Lgc_allocN
 .Lgc_allocN:
-  mov.i64                 $8, caml_call_gc
-  tcall.i64.i64.caml_gc   $8, $0, $1
+  mov.i64                 $103, caml_call_gc
+  tcall.i64.i64.caml_gc   $103, $0, $1
 .Lno_gc_allocN:
   ret                     $0, $1
   .end
+#else
+  .args                   i64, i64, i64
+
+  arg.i64                 $0, 0       # Caml_state
+  arg.i64                 $1, 1       # Caml_state->young_ptr
+  arg.i64                 $2, 2       # Caml_state->young_limit
+
+  cmp.i8.uge              $102, $1, $2
+  jcc                     $102, .Lno_gc_allocN, .Lgc_allocN
+.Lgc_allocN:
+  mov.i64                 $103, caml_call_gc
+  tcall.i64.i64.caml_gc   $103, $0, $1, $2
+.Lno_gc_allocN:
+  ret                     $0, $1, $2
+  .end
+#endif
 
 ################################################################################
 # caml_ml_array_bound_error
@@ -476,8 +605,9 @@ caml_allocN:
 caml_ml_array_bound_error:
   .visibility             global_default
   .call                   caml
-  .args                   i64, i64
   .noinline
+#ifdef __llir_x86_64__
+  .args                   i64, i64
 
   arg.i64                 $0, 0     # Caml_state
   arg.i64                 $1, 1     # Caml_state->young_ptr
@@ -485,6 +615,21 @@ caml_ml_array_bound_error:
   mov.i64                 $2, offset_young_ptr
   add.i64                 $3, $0, $2
   st.i64                  [$3], $1
+#else
+  .args                   i64, i64, i64
+
+  arg.i64                 $0, 0     # Caml_state
+  arg.i64                 $1, 1     # Caml_state->young_ptr
+  arg.i64                 $2, 2     # Caml_state->young_ptr
+
+  mov.i64                 $100, offset_young_ptr
+  add.i64                 $101, $0, $100
+  st.i64                  [$101], $1
+
+  mov.i64                 $100, offset_young_limit
+  add.i64                 $101, $0, $100
+  st.i64                  [$101], $2
+#endif
 
   mov.i64                 $4, $ret_addr
   mov.i64                 $5, offset_last_return_address

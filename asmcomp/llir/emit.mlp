@@ -236,6 +236,11 @@ let fundecl f =
     state_fields |> List.iter (fun (_, reg) -> `, {emit_temp reg}`);
   in
 
+  let emit_call_ret () =
+    `i64`;
+    state_fields |> List.iter (fun _ -> `.i64`)
+  in
+
   let emit_prob p br =
     match p with
     | None -> ()
@@ -264,8 +269,8 @@ let fundecl f =
       let callee = arg.(0) in
       let args = Array.sub arg 1 (Array.length arg - 1) in
       begin match handler with
-        | None -> `  call.i64.i64{emit_string (call_types res)}.caml`;
-        | Some _ -> `  invoke.i64.i64{emit_string (call_types res)}.caml`;
+        | None -> `  call.{emit_call_ret ()}{emit_string (call_types res)}.caml`;
+        | Some _ -> `  invoke.{emit_call_ret ()}{emit_string (call_types res)}.caml`;
       end;
       ` {emit_state_regs ()}{emit_regs res ", " ""},`;
       ` {emit_reg callee},`;
@@ -279,8 +284,8 @@ let fundecl f =
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
       begin match handler with
-        | None -> `  call.i64.i64{emit_string (call_types res)}.caml`;
-        | Some _ -> `  invoke.i64.i64{emit_string (call_types res)}.caml`
+        | None -> `  call.{emit_call_ret ()}{emit_string (call_types res)}.caml`;
+        | Some _ -> `  invoke.{emit_call_ret ()}{emit_string (call_types res)}.caml`
       end;
       ` {emit_state_regs ()}{emit_regs res ", " ""},`;
       ` {emit_temp addr},`;
@@ -294,7 +299,7 @@ let fundecl f =
       assert (Option.is_none handler);
       let callee = arg.(0) in
       let args = Array.sub arg 1 (Array.length arg - 1) in
-      `  tcall.i64.i64.v64.caml`;
+      `  tcall.{emit_call_ret ()}.v64.caml`;
       ` {emit_reg callee},`;
       ` {emit_state_regs ()}{emit_regs args ", " ""}`;
       ` {emit_frame false dbg}\n`;
@@ -302,7 +307,7 @@ let fundecl f =
       assert (Option.is_none handler);
       let addr = make_temp () in
       `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      `  tcall.i64.i64.v64.caml`;
+      `  tcall.{emit_call_ret ()}.v64.caml`;
       ` {emit_temp addr},`;
       ` {emit_state_regs ()}{emit_regs arg ", " ""}`;
       ` {emit_frame false dbg}\n`
@@ -414,9 +419,9 @@ let fundecl f =
       let fn = emit_addr func in
       begin match handler with
       | None ->
-        `  call.i64.i64.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()} {emit_alloc_frame dbginfo}\n`
+        `  call.{emit_call_ret ()}.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()} {emit_alloc_frame dbginfo}\n`
       | Some handler ->
-        `  invoke.i64.i64.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()}, {emit_label handler} {emit_alloc_frame dbginfo}\n`
+        `  invoke.{emit_call_ret ()}.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()}, {emit_label handler} {emit_alloc_frame dbginfo}\n`
       end;
       let offset = emit_const 8 in
       `  add.{emit_res res} {emit_reg res.(0)}, $5001, {emit_temp offset}\n`
@@ -624,15 +629,17 @@ let fundecl f =
   in
 
   (* Emit argument types and instructions to load them. *)
-  `  .args i64, i64`;
+  `  .args i64`;
+  List.iter (fun _ -> `, i64`) state_fields;
   Array.iter (fun reg -> `, {emit_type reg.typ}`) f.fun_args;
   `\n`;
   `  arg.i64 $5000, 0\n`;
   state_fields |> List.iteri (fun i (_, reg) ->
     `  arg.i64 {emit_temp reg}, {emit_int (i + 1)}\n`);
+  let nstate = List.length state_fields in
   Array.iteri
     (fun i reg ->
-      `  arg.{emit_type reg.typ} {emit_reg reg}, {emit_int (i + 2)}\n`)
+      `  arg.{emit_type reg.typ} {emit_reg reg}, {emit_int (i + 1 + nstate)}\n`)
     f.fun_args;
 
   (* Find all stack objects. *)

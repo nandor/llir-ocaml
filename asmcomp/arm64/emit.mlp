@@ -486,7 +486,7 @@ module BR = Branch_relaxation.Make (struct
     | Lreturn -> epilogue_size ()
     | Llabel _ -> 0
     | Lbranch _ -> 1
-    | Lcondbranch (tst, _) ->
+    | Lcondbranch (tst, _, _) ->
       begin match tst with
       | Itruetest -> 1
       | Ifalsetest -> 1
@@ -810,7 +810,7 @@ let emit_instr i =
         `{emit_label lbl}:\n`
     | Lbranch lbl ->
         `	b	{emit_label lbl}\n`
-    | Lcondbranch(tst, lbl) ->
+    | Lcondbranch(tst, _, lbl) ->
         begin match tst with
         | Itruetest ->
             `	cbnz	{emit_reg i.arg.(0)}, {emit_label lbl}\n`
