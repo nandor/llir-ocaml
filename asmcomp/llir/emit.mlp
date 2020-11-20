@@ -212,7 +212,23 @@ let fundecl f =
   in
 
   let state_fields =
-    [ Domainstate.Domain_young_ptr, 5001 ]
+    match Config.architecture with
+    | "llir_amd64" ->
+      [ Domainstate.Domain_young_ptr, 5001 ]
+    | "llir_arm64" ->
+      [ Domainstate.Domain_young_ptr, 5001
+      ; Domainstate.Domain_young_limit, 5002
+      ]
+    | "llir_riscv" ->
+      [ Domainstate.Domain_young_ptr, 5001
+      ; Domainstate.Domain_young_limit, 5002
+      ]
+    | "llir_power" ->
+      [ Domainstate.Domain_young_ptr, 5001
+      ; Domainstate.Domain_young_limit, 5002
+      ]
+    | _ ->
+      failwith "Invalid LLIR target"
   in
 
   let emit_state_regs () =
