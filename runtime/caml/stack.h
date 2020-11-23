@@ -49,6 +49,18 @@
 #define Mark_scanned(sp, retaddr) Saved_return_address(sp) = (retaddr) | 1
 #endif
 
+#ifdef TARGET_llir_power
+#if defined(MODEL_ppc)
+#error "TARGET_power: wrong MODEL"
+#elif defined(MODEL_ppc64)
+#error "TARGET_power: wrong MODEL"
+#elif defined(MODEL_ppc64le)
+#define Saved_return_address(sp) *((intnat *)((sp) + 16))
+#else
+#error "TARGET_power: wrong MODEL"
+#endif
+#endif
+
 #ifdef TARGET_s390x
 #define Saved_return_address(sp) *((intnat *)((sp) - SIZEOF_PTR))
 #define Trap_frame_size 16
