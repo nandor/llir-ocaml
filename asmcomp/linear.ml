@@ -17,6 +17,8 @@ open Mach
 (* Transformation of Mach code into a list of pseudo-instructions. *)
 type label = Cmm.label
 
+type handler = label * label
+
 type instruction =
   { mutable desc: instruction_desc;
     mutable next: instruction;
@@ -28,7 +30,7 @@ type instruction =
 and instruction_desc =
   | Lprologue
   | Lend
-  | Lop of Mach.operation * label option
+  | Lop of Mach.operation * handler option
   | Lreloadretaddr
   | Lreturn
   | Llabel of label
@@ -38,9 +40,9 @@ and instruction_desc =
   | Lswitch of label array
   | Lentertrap
   | Ladjust_trap_depth of { delta_traps : int; }
-  | Lpushtrap of { lbl_handler : label; trap_depth: int }
-  | Lpoptrap of { trap_depth: int }
-  | Lraise of { kind: Lambda.raise_kind; lbl_handler: label option }
+  | Lpushtrap of { lbl_handler : label; trap_depth : int }
+  | Lpoptrap of { trap_depth : int }
+  | Lraise of { kind : Lambda.raise_kind; lbl_handler : handler option }
 
 let has_fallthrough = function
   | Lreturn | Lbranch _ | Lswitch _ | Lraise _

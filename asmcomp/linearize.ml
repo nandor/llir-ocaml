@@ -253,9 +253,8 @@ let linear i n contains_calls =
         loop (add_branch lbl n1) !try_depth
     | Itrywith(body, exn_handler) ->
         let (lbl_join, n1) = get_label (linear i.Mach.next n lbl_handler) in
-        let (lbl_handler, n2) =
-          get_label (cons_instr Lentertrap (linear exn_handler n1 lbl_handler))
-        in
+        let (lbl_inner, n2) = get_label (linear exn_handler n1 lbl_handler) in
+        let (lbl_handler, n3) = get_label (cons_instr Lentertrap n2) in
         let trap_depth = !try_depth in
         incr try_depth;
         assert (i.Mach.arg = [| |] || Config.spacetime);
@@ -263,8 +262,8 @@ let linear i n contains_calls =
                    (linear body
                       (cons_instr
                          (Lpoptrap { trap_depth })
-                         (add_branch lbl_join n2))
-                      (Some lbl_handler)) in
+                         (add_branch lbl_join n3))
+                      (Some (lbl_handler, lbl_inner))) in
         decr try_depth;
         n3
 

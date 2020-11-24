@@ -234,6 +234,8 @@ let fundecl f =
       failwith "Invalid LLIR target"
   in
 
+  let get_field field = List.assoc_opt field state_fields in
+
   let emit_state_regs () =
     `$5000`;
     state_fields |> List.iter (fun (_, reg) -> `, {emit_temp reg}`);
@@ -280,7 +282,7 @@ let fundecl f =
       ` {emit_state_regs ()}{emit_regs args ", " ""}`;
       begin match handler with
         | None -> ()
-        | Some handler -> `, {emit_label handler}`;
+        | Some (handler, _) -> `, {emit_label handler}`;
       end;
       ` {emit_frame false dbg}\n`
     | Icall_imm { func } ->
@@ -295,7 +297,7 @@ let fundecl f =
       ` {emit_state_regs ()}{emit_regs arg ", " ""}`;
       begin match handler with
         | None -> ()
-        | Some handler -> `, {emit_label handler}`
+        | Some (handler, _) -> `, {emit_label handler}`
       end;
       ` {emit_frame false dbg}\n`
     | Itailcall_ind(_) ->
@@ -330,7 +332,7 @@ let fundecl f =
       ` {emit_regs arg ", " ""}`;
       begin match handler with
         | None -> ()
-        | Some handler -> `, {emit_label handler}`;
+        | Some (handler, _) -> `, {emit_label handler}`;
       end;
       if alloc then ` {emit_frame false dbg}`;
       `\n`;
@@ -423,7 +425,7 @@ let fundecl f =
       begin match handler with
       | None ->
         `  call.{emit_call_ret ()}.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()} {emit_alloc_frame dbginfo}\n`
-      | Some handler ->
+      | Some (handler, _) ->
         `  invoke.{emit_call_ret ()}.caml_alloc {emit_state_regs ()}, {emit_temp fn}, {emit_state_regs ()}, {emit_label handler} {emit_alloc_frame dbginfo}\n`
       end;
       let offset = emit_const 8 in
@@ -545,7 +547,7 @@ let fundecl f =
 
       let exc_frame = make_temp () in
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
-      begin match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+      begin match get_field Domainstate.Domain_exception_pointer with
       | Some reg ->
         `  st [{emit_temp exc_frame}], {emit_temp reg}\n`;
         `  mov.i64 {emit_temp reg}, {emit_temp jmp_frame}\n`;
@@ -559,7 +561,7 @@ let fundecl f =
     | Lpoptrap { trap_depth }->
       let exc_frame = make_temp () in
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
-      begin match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+      begin match get_field Domainstate.Domain_exception_pointer with
       | Some reg ->
         `  ld.i64 {emit_temp reg}, [{emit_temp exc_frame}]\n`;
       | None ->
@@ -578,7 +580,7 @@ let fundecl f =
         `  {emit_temp fn}, {emit_state_regs ()}{emit_regs arg ", " ""} `;
         begin match lbl_handler with
           | None -> ()
-          | Some handler -> `, {emit_label handler}`
+          | Some (handler, _) -> `, {emit_label handler}`
         end;
         ` {emit_frame true dbg}\n`;
         `  trap\n`
@@ -595,13 +597,8 @@ let fundecl f =
         emit_call ()
       | Lambda.Raise_notrace ->
         `  # Lraise (Lambda.Raise_notrace)\n`;
-        state_fields |> List.iter (fun (field, reg) ->
-          let addr = domain_field field in
-          `  st.i64  [{emit_temp addr}], {emit_temp reg}\n`);
-        let val_addr = domain_field Domainstate.Domain_exception_value in
-        `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
         let frame_addr =
-          match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+          match get_field Domainstate.Domain_exception_pointer with
           | Some reg ->
             reg
           | _ ->
@@ -621,13 +618,24 @@ let fundecl f =
         `  ld.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
         let frame_val = make_temp () in
         `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
-        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-        `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
+        begin match get_field Domainstate.Domain_exception_pointer with
+        | Some reg ->
+          `  mov.i64 {emit_temp reg}, {emit_temp frame_val}\n`;
+        | None ->
+          let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+          `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
+        end;
         begin match lbl_handler with
         | None ->
+          state_fields |> List.iter (fun (field, reg) ->
+            let addr = domain_field field in
+            `  st [{emit_temp addr}], {emit_temp reg}\n`);
+          let val_addr = domain_field Domainstate.Domain_exception_value in
+          `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
           `  raise.caml {emit_temp addr}, {emit_temp sp_val}\n`;
-        | Some h ->
-          `  jmp {emit_label h}\n`
+        | Some (_, ha) ->
+          `  mov.v64 {emit_reg Proc.loc_exn_bucket}, {emit_reg arg.(0)}\n`;
+          `  jmp {emit_label ha}\n`
         end
       end
   in
@@ -694,7 +702,7 @@ let fundecl f =
     `  {emit_temp addr}, {emit_state_regs ()}`;
     begin match handler with
       | None -> ()
-      | Some handler -> `, {emit_label handler}`
+      | Some (handler, _) -> `, {emit_label handler}`
     end;
     ` {emit_frame false dbg}\n`;
     `  trap\n`;

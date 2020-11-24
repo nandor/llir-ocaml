@@ -64,19 +64,19 @@ module type S = sig
      : num_bytes:int
     -> label_after_call_gc:Cmm.label option
     -> dbginfo:Debuginfo.alloc_dbginfo
-    -> handler:Cmm.label option
+    -> handler:Linear.handler option
     -> Linear.instruction_desc
   val relax_intop_checkbound
      : label_after_error:Cmm.label option
-    -> handler:Cmm.label option
+    -> handler:Linear.handler option
     -> Linear.instruction_desc
   val relax_intop_imm_checkbound
      : bound:int
     -> label_after_error:Cmm.label option
-    -> handler:Cmm.label option
+    -> handler:Linear.handler option
     -> Linear.instruction_desc
   val relax_specific_op
      : Arch.specific_operation
-    -> handler:Cmm.label option
+    -> handler:Linear.handler option
     -> Linear.instruction_desc
 end
