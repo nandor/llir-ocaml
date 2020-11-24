@@ -16,21 +16,22 @@
     .globl  call_gen_code
 call_gen_codei:
     .call c
-    .args                       i64, i64, i64, i64, i64
-    mov.i64                     $100, Caml_state
-    mov.i64                     $101, 0
-    mov.i64                     $102, 0
-    arg.i64                     $0, 0
-    arg.i64                     $1, 1
-    arg.i64                     $2, 2
-    arg.i64                     $3, 3
-    arg.i64                     $4, 4
+    .args                           i64, i64, i64, i64, i64
+    mov.i64                         $100, Caml_state
+    mov.i64                         $101, 0
+    mov.i64                         $102, 0
+    mov.i64                         $103, 0
+    arg.i64                         $0, 0
+    arg.i64                         $1, 1
+    arg.i64                         $2, 2
+    arg.i64                         $3, 3
+    arg.i64                         $4, 4
 #ifdef __llir_x86_64__
-    call.i64.i64.i32.caml       $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
-    ret                         $7
+    call.i64.i64.i32.caml           $5, $6,         $9, $0, $100, $101,             $1, $2, $3, $4
+    ret                             $9
 #else
-    call.i64.i64.i64.i32.caml   $5, $6, $7, $8, $0, $100, $101, $102, $1, $2, $3, $4
-    ret                         $8
+    call.i64.i64.i64.i64.i32.caml   $5, $6, $7, $8, $9, $0, $100, $101, $102, $103, $1, $2, $3, $4
+    ret                             $9
 #endif
     .end
 
@@ -38,21 +39,22 @@ call_gen_codei:
     .globl  call_gen_code
 call_gen_codel:
     .call c
-    .args                       i64, i64, i64, i64, i64
-    mov.i64                     $100, Caml_state
-    mov.i64                     $101, 0
-    mov.i64                     $102, 0
-    arg.i64                     $0, 0
-    arg.i64                     $1, 1
-    arg.i64                     $2, 2
-    arg.i64                     $3, 3
-    arg.i64                     $4, 4
+    .args                           i64, i64, i64, i64, i64
+    mov.i64                         $100, Caml_state
+    mov.i64                         $101, 0
+    mov.i64                         $102, 0
+    mov.i64                         $103, 0
+    arg.i64                         $0, 0
+    arg.i64                         $1, 1
+    arg.i64                         $2, 2
+    arg.i64                         $3, 3
+    arg.i64                         $4, 4
 #ifdef __llir_x86_64__
-    call.i64.i64.i64.caml       $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
-    ret                         $7
+    call.i64.i64.i64.caml           $5, $6,         $9, $0, $100, $101,             $1, $2, $3, $4
+    ret                             $9
 #else
-    call.i64.i64.i64.i64.caml   $5, $6, $7, $8, $0, $100, $101, $102, $1, $2, $3, $4
-    ret                         $8
+    call.i64.i64.i64.i64.i64.caml   $5, $6, $7, $8, $9, $0, $100, $101, $102, $103, $1, $2, $3, $4
+    ret                             $9
 #endif
     .end
 
@@ -60,40 +62,42 @@ call_gen_codel:
     .globl  call_gen_code
 call_gen_codef:
     .call c
-    .args                       i64, i64, i64, i64, i64
-    mov.i64                     $100, Caml_state
-    mov.i64                     $101, 0
-    mov.i64                     $102, 0
-    arg.i64                     $0, 0
-    arg.i64                     $1, 1
-    arg.i64                     $2, 2
-    arg.i64                     $3, 3
-    arg.i64                     $4, 4
+    .args                               i64, i64, i64, i64, i64
+    mov.i64                             $100, Caml_state
+    mov.i64                             $101, 0
+    mov.i64                             $102, 0
+    mov.i64                             $103, 0
+    arg.i64                             $0, 0
+    arg.i64                             $1, 1
+    arg.i64                             $2, 2
+    arg.i64                             $3, 3
+    arg.i64                             $4, 4
 #ifdef __llir_x86_64__
-    call.i64.i64.f64.caml       $5, $6, $7, $0, $100, $101, $1, $2, $3, $4
-    ret                         $7
+    call.i64.i64.f64.caml               $5, $6,         $9, $0, $100, $101,             $1, $2, $3, $4
+    ret                                 $9
 #else
-    call.i64.i64.i64.f64.caml   $5, $6, $7, $8, $0, $100, $101, $102, $1, $2, $3, $4
-    ret                         $8
+    call.i64.i64.i64.i64.f64.caml       $5, $6, $7, $8, $9, $0, $100, $101, $102, $103, $1, $2, $3, $4
+    ret                                 $9
 #endif
     .end
 
     .globl  call_gen_code
 call_gen_code:
     .call c
-    .args                    i64, i64, i64, i64, i64
-    mov.i64                  $100, Caml_state
-    mov.i64                  $101, 0
-    mov.i64                  $102, 0
-    arg.i64                  $0, 0
-    arg.i64                  $1, 1
-    arg.i64                  $2, 2
-    arg.i64                  $3, 3
-    arg.i64                  $4, 4
+    .args                            i64, i64, i64, i64, i64
+    mov.i64                          $100, Caml_state
+    mov.i64                          $101, 0
+    mov.i64                          $102, 0
+    mov.i64                          $103, 0
+    arg.i64                          $0, 0
+    arg.i64                          $1, 1
+    arg.i64                          $2, 2
+    arg.i64                          $3, 3
+    arg.i64                          $4, 4
 #ifdef __llir_x86_64__
-    tcall.i64.i64.i64.caml   $0, $100, $101, $1, $2, $3, $4
+    tcall.i64.i64.i64.caml           $0, $100, $101,             $1, $2, $3, $4
 #else
-    tcall.i64.i64.i64.caml   $0, $100, $101, $102, $1, $2, $3, $4
+    tcall.i64.i64.i64.i64.i64.caml   $0, $100, $101, $102, $103, $1, $2, $3, $4
 #endif
     .end
 

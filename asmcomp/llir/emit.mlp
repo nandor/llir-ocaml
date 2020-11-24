@@ -218,14 +218,17 @@ let fundecl f =
     | "llir_arm64" ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
+      ; Domainstate.Domain_exception_pointer, 5003
       ]
     | "llir_riscv" ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
+      ; Domainstate.Domain_exception_pointer, 5003
       ]
     | "llir_power" ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
+      ; Domainstate.Domain_exception_pointer, 5003
       ]
     | _ ->
       failwith "Invalid LLIR target"
@@ -460,7 +463,7 @@ let fundecl f =
     | Lbranch(label) ->
       `  jmp {emit_label label}\n`
     | Lcondbranch(test, p, label) ->
-      (match test with
+      begin match test with
       | Itruetest ->
         `  jt {emit_reg arg.(0)}, {emit_label label}{emit_prob p true}\n`
       | Ifalsetest ->
@@ -500,7 +503,7 @@ let fundecl f =
         let flag = make_temp () in
         `  and.i64 {emit_temp flag}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
         `  jf {emit_temp flag}, {emit_label label}{emit_prob p false}\n`
-      );
+      end
     | Lcondbranch3(lbl_lt, lbl_eq, lbl_gt) ->
         let imm = emit_const 1 in
         let flag = make_temp () in
@@ -526,34 +529,45 @@ let fundecl f =
         let addr = domain_field field in
         `  ld.i64  {emit_temp reg}, [{emit_temp addr}]\n`);
       let exception_value_addr = domain_field Domainstate.Domain_exception_value in
-      `  ld.8.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp exception_value_addr}]\n`
+      `  ld.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp exception_value_addr}]\n`
     | Lpushtrap { lbl_handler; trap_depth } ->
       let jmp_addr = make_temp () in
       let jmp_frame = make_temp () in
       `  mov.i64 {emit_temp jmp_addr}, {emit_label lbl_handler}\n`;
       `  frame.i64 {emit_temp jmp_frame}, {emit_int trap_depth}, 0\n`;
-      `  st.8 [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`;
+      `  st [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`;
 
       let sp_val = make_temp () in
       let sp_frame = make_temp () in
       `  mov.i64 {emit_temp sp_val}, $sp\n`;
       `  frame.i64 {emit_temp sp_frame}, {emit_int trap_depth}, 8\n`;
-      `  st.8 [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
+      `  st [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
 
-      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-      let exc_ptr_old_val = make_temp () in
       let exc_frame = make_temp () in
-      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
-      `  st.8 [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
-      `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp jmp_frame}\n`
+      begin match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+      | Some reg ->
+        `  st [{emit_temp exc_frame}], {emit_temp reg}\n`;
+        `  mov.i64 {emit_temp reg}, {emit_temp jmp_frame}\n`;
+      | None ->
+        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+        let exc_ptr_old_val = make_temp () in
+        `  ld.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
+        `  st [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
+        `  st [{emit_temp exc_ptr_addr}], {emit_temp jmp_frame}\n`;
+      end
     | Lpoptrap { trap_depth }->
-      let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-      let exc_ptr_old_val = make_temp () in
       let exc_frame = make_temp () in
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
-      `  ld.8.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
-      `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`
+      begin match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+      | Some reg ->
+        `  ld.i64 {emit_temp reg}, [{emit_temp exc_frame}]\n`;
+      | None ->
+        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+        let exc_ptr_old_val = make_temp () in
+        `  ld.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
+        `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`;
+      end
     | Lraise { kind; lbl_handler } ->
       let emit_call () =
         let fn = emit_addr "caml_raise_exn" in
@@ -586,9 +600,16 @@ let fundecl f =
           `  st.i64  [{emit_temp addr}], {emit_temp reg}\n`);
         let val_addr = domain_field Domainstate.Domain_exception_value in
         `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
-        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-        let frame_addr = make_temp () in
-        `  ld.i64 {emit_temp frame_addr}, [{emit_temp exc_ptr_addr}]\n`;
+        let frame_addr =
+          match List.assoc_opt Domainstate.Domain_exception_pointer state_fields with
+          | Some reg ->
+            reg
+          | _ ->
+            let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
+            let frame_addr = make_temp () in
+            `  ld.i64 {emit_temp frame_addr}, [{emit_temp exc_ptr_addr}]\n`;
+            frame_addr
+        in
         let off = emit_const 8 in
         let addr = make_temp () in
         `  ld.i64 {emit_temp addr}, [{emit_temp frame_addr}]\n`;
@@ -600,12 +621,14 @@ let fundecl f =
         `  ld.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
         let frame_val = make_temp () in
         `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
+        let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
         `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
-        (match lbl_handler with
+        begin match lbl_handler with
         | None ->
-          `  raise.caml {emit_temp addr}, {emit_temp sp_val}\n`
+          `  raise.caml {emit_temp addr}, {emit_temp sp_val}\n`;
         | Some h ->
-          `  jmp {emit_label h}\n`)
+          `  jmp {emit_label h}\n`
+        end
       end
   in
   let is_terminator = function
