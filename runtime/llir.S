@@ -268,7 +268,7 @@ caml_start_program_helper:
   add.i64                   $19, $0, $70
   ld.i64                    $1, [$19]
 
-#ifdef __x86_64__
+#ifdef __llir_x86_64__
 #else
   mov.i64                   $70, offset_young_limit # Caml_state->young_limit
   add.i64                   $19, $0, $70
@@ -322,7 +322,7 @@ caml_start_program_helper:
   arg.i64                   $102, 3            # Arg 1
   arg.i64                   $103, 4            # Arg 2
   arg.i64                   $104, 5            # Arg 3
-#ifdef __x86_64__
+#ifdef __llir_x86_64__
   invoke.i64.i64.i64.caml     $80, $81,      $89, $100, $0, $1,     $101, $102, $103, $104, .Lhandler_impl @caml_frame
 #else
   invoke.i64.i64.i64.i64.caml $80, $81, $82, $89, $100, $0, $1, $2, $101, $102, $103, $104, .Lhandler_impl @caml_frame
@@ -331,7 +331,7 @@ caml_start_program_helper:
 .Lreturn_impl:
   phi.i64                   $300, .Lentry_impl, $80, .Lhandler_impl, $400 # Caml_state
   phi.i64                   $301, .Lentry_impl, $81, .Lhandler_impl, $401 # Caml_state->young_ptr
-#ifdef __x86_64__
+#ifdef __llir_x86_64__
 #else
   phi.i64                   $302, .Lentry_impl, $82, .Lhandler_impl, $402 # Caml_state->young_limit
 #endif
@@ -342,7 +342,7 @@ caml_start_program_helper:
   add.i64                   $200, $300, $70
   st.i64                    [$200], $301
 
-#ifdef __x86_64__
+#ifdef __llir_x86_64__
 #else
   mov.i64                   $70, offset_young_limit
   add.i64                   $200, $300, $70
@@ -391,7 +391,7 @@ caml_start_program_helper:
   add.i64                   $200, $0, $70
   ld.i64                    $401, [$200]
 
-#ifdef __x86_64__
+#ifdef __llir_x86_64__
 #else
   mov.i64                   $70, offset_young_limit
   add.i64                   $200, $0, $70
