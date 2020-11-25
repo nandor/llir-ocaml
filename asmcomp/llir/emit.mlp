@@ -525,13 +525,7 @@ let fundecl f =
       ) labels;
       `\n`
     | Lentertrap ->
-      let state_addr = emit_addr "Caml_state" in
-      `  ld.i64 $5000, [{emit_temp state_addr}]\n`;
-      state_fields |> List.iter (fun (field, reg) ->
-        let addr = domain_field field in
-        `  ld.i64  {emit_temp reg}, [{emit_temp addr}]\n`);
-      let exception_value_addr = domain_field Domainstate.Domain_exception_value in
-      `  ld.v64 {emit_reg Proc.loc_exn_bucket}, [{emit_temp exception_value_addr}]\n`
+      `  landing_pad.{emit_call_ret ()}.v64.caml {emit_state_regs ()}, {emit_reg Proc.loc_exn_bucket}\n`;
     | Lpushtrap { lbl_handler; trap_depth } ->
       let jmp_addr = make_temp () in
       let jmp_frame = make_temp () in
@@ -627,12 +621,7 @@ let fundecl f =
         end;
         begin match lbl_handler with
         | None ->
-          state_fields |> List.iter (fun (field, reg) ->
-            let addr = domain_field field in
-            `  st [{emit_temp addr}], {emit_temp reg}\n`);
-          let val_addr = domain_field Domainstate.Domain_exception_value in
-          `  st [{emit_temp val_addr}], {emit_reg arg.(0)}\n`;
-          `  raise.caml {emit_temp addr}, {emit_temp sp_val}\n`;
+          `  raise.caml {emit_temp addr}, {emit_temp sp_val}, {emit_state_regs ()}, {emit_reg arg.(0)}\n`;
         | Some (_, ha) ->
           `  mov.v64 {emit_reg Proc.loc_exn_bucket}, {emit_reg arg.(0)}\n`;
           `  jmp {emit_label ha}\n`

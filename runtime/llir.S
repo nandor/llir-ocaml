@@ -16,13 +16,12 @@
 #define offset_young_ptr            0
 #define offset_young_limit          8
 #define offset_exception_pointer    16
-#define offset_exception_value      24
-#define offset_bottom_of_stack      208
-#define offset_last_return_address  216
-#define offset_gc_regs              224
-#define offset_backtrace_active     232
-#define offset_backtrace_pos        240
-#define offset_callback_link        408
+#define offset_bottom_of_stack      200
+#define offset_last_return_address  208
+#define offset_gc_regs              216
+#define offset_backtrace_active     224
+#define offset_backtrace_pos        232
+#define offset_callback_link        400
 
 
 
@@ -137,16 +136,12 @@ caml_raise_exn:
   # Check if traces are active.
   mov.i64     $10, offset_backtrace_active
   add.i64     $11, $0, $10
-  ld.i32      $1, [$11]
-  mov.i32     $2, 1
-  cmp.eq.i8   $11, $1, $2
+  ld.i32      $12, [$11]
+  mov.i32     $13, 1
+  cmp.eq.i8   $11, $12, $13
   jt          $11, .Lactive.caml_raise_exn
 .Lthrow.caml_raise_exn:
   # Raise the exception here.
-  mov.i64     $10, offset_exception_value
-  add.i64     $11, $0, $10
-  st          [$11], $4
-
   mov.i64     $15, 8
   add.i64     $17, $3, $15
   add.i64     $18, $17, $15
@@ -155,13 +150,15 @@ caml_raise_exn:
   ld.i64      $20, [$17]    # Stack pointer.
   ld.i64      $21, [$18]    # Next frame.
 
+#if defined(__llir_x86_64__)
   # Store the exception pointer
   mov.i64     $10, offset_exception_pointer
   add.i64     $11, $0, $10
   st          [$11], $21
-
-  # Jump.
-  raise.caml  $19, $20
+  raise.caml  $19, $20, $0, $1, $4
+#else
+  raise.caml  $19, $20, $0, $1, $2, $21, $4
+#endif
 .Lactive.caml_raise_exn:
   mov.i64     $11, $ret_addr
   mov.i64     $12, $frame_addr
@@ -184,6 +181,7 @@ caml_raise_exception:
 
   # Fetch the address of the state object.
   arg.i64     $100, 0
+  arg.i64     $101, 1
 
   # Check if traces are active.
   mov.i64     $0, offset_backtrace_active
@@ -193,15 +191,9 @@ caml_raise_exception:
   cmp.eq.i8   $3, $1, $2
   jt          $3, .Lactive.caml_raise_exception
 .Lthrow.caml_raise_exception:
-  # Raise the exception here.
-  arg.i64     $10, 1
-  mov.i64     $11, offset_exception_value
-  add.i64     $11, $11, $100
-  st          [$11], $10
-
   # Load the frame.
   mov.i64     $14, offset_exception_pointer
-  add.i64     $14, $14, $100
+  add.i64     $14, $100, $14
   mov.i64     $15, 8
   ld.i64      $16, [$14]
   add.i64     $17, $16, $15
@@ -211,12 +203,26 @@ caml_raise_exception:
   ld.i64      $20, [$17]    # Stack pointer.
   ld.i64      $21, [$18]    # Next frame.
 
-  # Jump.
+#ifdef __llir_x86_64__
   st          [$14], $21
-  raise.caml  $19, $20
-.Lactive.caml_raise_exception:
-  arg.i64     $10, 1
 
+  mov.i64     $10, offset_young_ptr
+  add.i64     $11, $100, $10
+  ld.i64      $1, [$11]
+
+  raise.caml  $19, $20, $100, $1, $101
+#else
+  mov.i64     $10, offset_young_ptr
+  add.i64     $11, $100, $10
+  ld.i64      $1, [$11]
+
+  mov.i64     $10, offset_young_limit
+  add.i64     $11, $100, $10
+  ld.i64      $2, [$11]
+
+  raise.caml  $19, $20, $100, $1, $2, $21, $101
+#endif
+.Lactive.caml_raise_exception:
   mov.i64     $11, offset_last_return_address
   add.i64     $11, $11, $100
   ld.i64      $12, [$11]
@@ -228,7 +234,7 @@ caml_raise_exception:
   ld.i64      $16, [$15]
 
   mov.i64     $17, caml_stash_backtrace
-  call.c      $17, $10, $12, $14, $16
+  call.c      $17, $101, $12, $14, $16
 
   jmp .Lthrow.caml_raise_exception
   .end
@@ -387,27 +393,14 @@ caml_start_program_helper:
 
 .Lhandler_impl:
   # Exception handler, marks value as exception.
-  mov.i64                   $500, Caml_state
-  ld.i64                    $400, [$500]
-
-  mov.i64                   $70, offset_young_ptr
-  add.i64                   $200, $0, $70
-  ld.i64                    $401, [$200]
-
 #ifdef __llir_x86_64__
+  landing_pad.i64.i64.i64.caml          $400, $401,             $600
 #else
-  mov.i64                   $70, offset_young_limit
-  add.i64                   $200, $0, $70
-  ld.i64                    $402, [$200]
+  landing_pad.i64.i64.i64.i64.i64.caml  $400, $401, $402, $403, $600
 #endif
-
-  mov.i64                   $70, offset_exception_value
-  add.i64                   $200, $0, $70
-  ld.i64                    $201, [$200]
-  mov.i64                   $202, 2
-  or.i64                    $450, $201, $202
-
-  jmp                       .Lreturn_impl
+  mov.i64                               $202, 2
+  or.i64                                $450, $600, $202
+  jmp                                   .Lreturn_impl
   .end
 
 ################################################################################
