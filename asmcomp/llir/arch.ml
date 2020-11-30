@@ -14,9 +14,27 @@
 
 (* Specific operations for the GenM processor *)
 
+type subarch =
+  | POWER
+  | AMD64
+  | ARM64
+  | RISCV
+
+let subarch =
+  match Config.architecture with
+  | "llir_amd64" -> AMD64
+  | "llir_arm64" -> ARM64
+  | "llir_riscv" -> RISCV
+  | "llir_power" -> POWER
+  | _ -> failwith "invalid architecture"
+
 type addressing_mode = Iindexed of int
 
-type specific_operation
+type specific_operation =
+  | Isqrt
+  | Ibswap16
+  | Ibswap32
+  | Ibswap64
 
 let big_endian = false
 let size_addr = 8
@@ -33,8 +51,16 @@ let print_addressing printreg addr ppf arg =
     printreg ppf arg.(0);
     if n <> 0 then Format.fprintf ppf ", %i" n
 
-let print_specific_operation _ _ _ _ =
-  failwith "print_specific_operation"
+let print_specific_operation printreg op ppf arg =
+  match op with
+  | Isqrt ->
+      Format.fprintf ppf "sqrt %a" printreg arg.(0)
+  | Ibswap16 ->
+      Format.fprintf ppf "bswap16 %a" printreg arg.(0)
+  | Ibswap32 ->
+      Format.fprintf ppf "bswap32 %a" printreg arg.(0)
+  | Ibswap64 ->
+      Format.fprintf ppf "bswap64 %a" printreg arg.(0)
 
 let offset_addressing addr delta =
   match addr with

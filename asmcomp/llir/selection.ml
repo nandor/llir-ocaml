@@ -18,7 +18,7 @@ open Cmm
 
 
 class selector = object
-  inherit Selectgen.selector_generic
+  inherit Selectgen.selector_generic as super
 
   method is_immediate _ = true
 
@@ -27,6 +27,21 @@ class selector = object
       (Iindexed n, arg)
     | arg ->
       (Iindexed 0, arg)
+
+  method! select_operation op args dbg =
+    match op, subarch with
+    | Cextcall("sqrt", _, _, _), (ARM64|AMD64) ->
+      (Ispecific Isqrt, args)
+    | Cextcall("caml_bswap16_direct", _, _, _), _ ->
+      (Ispecific Ibswap16, args)
+    | Cextcall("caml_int32_direct_bswap", _, _, _), _ ->
+      (Ispecific Ibswap32, args)
+    | Cextcall("caml_int64_direct_bswap", _, _, _), _ ->
+      (Ispecific Ibswap64, args)
+    | Cextcall("caml_nativeint_direct_bswap", _, _, _), _ ->
+      (Ispecific Ibswap64, args)
+    | _ ->
+      super#select_operation op args dbg
 end
 
 let fundecl f =

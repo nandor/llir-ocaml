@@ -212,26 +212,24 @@ let fundecl f =
   in
 
   let state_fields =
-    match Config.architecture with
-    | "llir_amd64" ->
+    match Arch.subarch with
+    | AMD64 ->
       [ Domainstate.Domain_young_ptr, 5001 ]
-    | "llir_arm64" ->
+    | ARM64 ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
       ; Domainstate.Domain_exception_pointer, 5003
       ]
-    | "llir_riscv" ->
+    | RISCV ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
       ; Domainstate.Domain_exception_pointer, 5003
       ]
-    | "llir_power" ->
+    | POWER ->
       [ Domainstate.Domain_young_ptr, 5001
       ; Domainstate.Domain_young_limit, 5002
       ; Domainstate.Domain_exception_pointer, 5003
       ]
-    | _ ->
-      failwith "Invalid LLIR target"
   in
 
   let get_field field = List.assoc_opt field state_fields in
@@ -259,7 +257,6 @@ let fundecl f =
     | Ispill
     | Ireload
     | Istackoffset _
-    | Ispecific _
     | Iname_for_debugger _ ->
       assert false
     | Imove ->
@@ -451,6 +448,20 @@ let fundecl f =
       `  sext.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iintoffloat ->
       `  trunc.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
+    | Ispecific Ibswap16 ->
+      let tmpa, tmpr = make_temp (), make_temp () in
+      `  trunc.i16 {emit_temp tmpa}, {emit_reg arg.(0)}\n`;
+      `  bswap.i16 {emit_temp tmpr}, {emit_temp tmpa}\n`;
+      `  zext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
+    | Ispecific Ibswap32 ->
+      let tmpa, tmpr = make_temp (), make_temp () in
+      `  trunc.i32 {emit_temp tmpa}, {emit_reg arg.(0)}\n`;
+      `  bswap.i32 {emit_temp tmpr}, {emit_temp tmpa}\n`;
+      `  zext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
+    | Ispecific Ibswap64 ->
+      `  bswap.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
+    | Ispecific Isqrt ->
+      `  sqrt.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
   in
 
   let emit_instr arg res dbg = function
