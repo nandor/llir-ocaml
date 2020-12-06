@@ -418,11 +418,11 @@ AC_CHECK_TOOLS([LD],[ld link])
 AS_IF([test x"$enable_llir" = "xyes"],
   [
     llir=true
-    LD="llir_$target-ld"
-    CC="llir_$target-gcc"
-    AS="llir_$target-as"
-    AR="llir_$target-ar"
-    RANLIB="llir_$target-ranlib"
+    AS_IF([test -z "$LD"], [LD="llir_$target-ld"])
+    AS_IF([test -z "$CC"], [CC="llir_$target-gcc"])
+    AS_IF([test -z "$AS"], [AS="llir_$target-as"])
+    AS_IF([test -z "$AR"], [AR="llir_$target-ar"])
+    AS_IF([test -z "$RANLIB"], [RANLIB="llir_$target-ranlib"])
     ASPP="$CC -c"
     PARTIALLD="$LD -r"
     ARCMD="$AR"
@@ -1034,20 +1034,8 @@ AS_CASE([$arch],
   [AS_CASE([$host],
     [*-linux-musl],
        # Alpine and other musl-based Linux distributions
-       [
-        AS_IF([test x"$enable_llir" = "xyes"],
-          [],
-          [common_cflags="-no-pie $common_cflags"])
-       ],
+       [common_cflags="-no-pie $common_cflags"],
     [])])
-
-# Assembler
-
-AS_IF([test x"$enable_llir" = "xyes"],
-  [toolpref="llir-"],
-  AS_IF([test -n "$host_alias"],
-    [toolpref="${host_alias}-"],
-    []))
 
 # We first compute default values for as and aspp
 # If values have been given by the user then they take precedence over

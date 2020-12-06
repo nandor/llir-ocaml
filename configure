@@ -3376,11 +3376,21 @@ fi
 if test x"$enable_llir" = "xyes"; then :
 
     llir=true
-    LD="llir_$target-ld"
-    CC="llir_$target-gcc"
-    AS="llir_$target-as"
-    AR="llir_$target-ar"
-    RANLIB="llir_$target-ranlib"
+    if test -z "$LD"; then :
+  LD="llir_$target-ld"
+fi
+    if test -z "$CC"; then :
+  CC="llir_$target-gcc"
+fi
+    if test -z "$AS"; then :
+  AS="llir_$target-as"
+fi
+    if test -z "$AR"; then :
+  AR="llir_$target-ar"
+fi
+    if test -z "$RANLIB"; then :
+  RANLIB="llir_$target-ranlib"
+fi
     ASPP="$CC -c"
     PARTIALLD="$LD -r"
     ARCMD="$AR"
@@ -13866,27 +13876,11 @@ case $arch in #(
     case $host in #(
   *-linux-musl) :
     # Alpine and other musl-based Linux distributions
-
-        if test x"$enable_llir" = "xyes"; then :
-
-else
-  common_cflags="-no-pie $common_cflags"
-fi
-        ;; #(
+       common_cflags="-no-pie $common_cflags" ;; #(
   *) :
      ;;
 esac ;;
 esac
-
-# Assembler
-
-if test x"$enable_llir" = "xyes"; then :
-  toolpref="llir-"
-else
-  if test -n "$host_alias"; then :
-  toolpref="${host_alias}-"
-fi
-fi
 
 # We first compute default values for as and aspp
 # If values have been given by the user then they take precedence over
