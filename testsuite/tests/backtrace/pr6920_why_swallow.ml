@@ -4,6 +4,7 @@
    ocamlopt_flags = "-inline 0"
    exit_status = "2"
    compare_programs = "false"
+   * not-llir
 *)
 
 let why : unit -> unit = fun () -> raise Exit [@@inline never]
