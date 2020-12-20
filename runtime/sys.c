@@ -178,7 +178,7 @@ static int sys_open_flags[] = {
   O_BINARY, O_TEXT, O_NONBLOCK
 };
 
-CAMLprim value caml_sys_open(value path, value vflags, value vperm)
+CAMLprim value NOINLINE caml_sys_open(value path, value vflags, value vperm)
 {
   CAMLparam3(path, vflags, vperm);
   int fd, flags, perm;
@@ -211,7 +211,7 @@ CAMLprim value caml_sys_open(value path, value vflags, value vperm)
   CAMLreturn(Val_long(fd));
 }
 
-CAMLprim value caml_sys_close(value fd_v)
+CAMLprim value NOINLINE caml_sys_close(value fd_v)
 {
   int fd = Int_val(fd_v);
   caml_enter_blocking_section();
@@ -220,7 +220,7 @@ CAMLprim value caml_sys_close(value fd_v)
   return Val_unit;
 }
 
-CAMLprim value caml_sys_file_exists(value name)
+CAMLprim value NOINLINE caml_sys_file_exists(value name)
 {
 #ifdef _WIN32
   struct _stati64 st;
@@ -240,7 +240,7 @@ CAMLprim value caml_sys_file_exists(value name)
   return Val_bool(ret == 0);
 }
 
-CAMLprim value caml_sys_is_directory(value name)
+CAMLprim value NOINLINE caml_sys_is_directory(value name)
 {
   CAMLparam1(name);
 #ifdef _WIN32
@@ -266,7 +266,7 @@ CAMLprim value caml_sys_is_directory(value name)
 #endif
 }
 
-CAMLprim value caml_sys_remove(value name)
+CAMLprim value NOINLINE caml_sys_remove(value name)
 {
   CAMLparam1(name);
   char_os * p;
@@ -281,7 +281,7 @@ CAMLprim value caml_sys_remove(value name)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value caml_sys_rename(value oldname, value newname)
+CAMLprim value NOINLINE caml_sys_rename(value oldname, value newname)
 {
   char_os * p_old;
   char_os * p_new;
@@ -300,7 +300,7 @@ CAMLprim value caml_sys_rename(value oldname, value newname)
   return Val_unit;
 }
 
-CAMLprim value caml_sys_chdir(value dirname)
+CAMLprim value NOINLINE caml_sys_chdir(value dirname)
 {
   CAMLparam1(dirname);
   char_os * p;
@@ -427,7 +427,7 @@ void caml_sys_init(char_os * exe_name, char_os **argv)
 #endif
 #endif
 
-CAMLprim value caml_sys_system_command(value command)
+CAMLprim value NOINLINE caml_sys_system_command(value command)
 {
   CAMLparam1 (command);
   int status, retcode;
@@ -616,7 +616,7 @@ CAMLprim value caml_sys_get_config(value unit)
   CAMLreturn (result);
 }
 
-CAMLprim value caml_sys_read_directory(value path)
+CAMLprim value NOINLINE caml_sys_read_directory(value path)
 {
   CAMLparam1(path);
   CAMLlocal1(result);
