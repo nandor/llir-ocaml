@@ -635,7 +635,7 @@ CAMLprim value NOINLINE caml_thread_new(value clos)          /* ML */
 
 /* Register a thread already created from C */
 
-CAMLexport int caml_c_thread_register(void)
+CAMLexport int NOINLINE caml_c_thread_register(void)
 {
   caml_thread_t th;
   st_retcode err;

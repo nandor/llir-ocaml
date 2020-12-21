@@ -63,7 +63,7 @@ CAMLprim value caml_natdynlink_globals_inited(value unit)
   return Val_int(caml_globals_inited);
 }
 
-CAMLprim value caml_natdynlink_open(value filename, value global)
+CAMLprim value NOINLINE caml_natdynlink_open(value filename, value global)
 {
   CAMLparam2 (filename, global);
   CAMLlocal3 (res, handle, header);
@@ -146,7 +146,7 @@ CAMLprim value caml_natdynlink_run(value handle_v, value symbol) {
   CAMLreturn (result);
 }
 
-CAMLprim value caml_natdynlink_run_toplevel(value filename, value symbol)
+CAMLprim value NOINLINE caml_natdynlink_run_toplevel(value filename, value symbol)
 {
   CAMLparam2 (filename, symbol);
   CAMLlocal3 (res, v, handle_v);

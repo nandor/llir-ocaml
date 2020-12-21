@@ -66,7 +66,7 @@ static int win_truncate(WCHAR * path, __int64 len)
   return ret;
 }
 
-CAMLprim value unix_truncate(value path, value len)
+CAMLprim value NOINLINE unix_truncate(value path, value len)
 {
   CAMLparam2(path, len);
   WCHAR * p;
@@ -82,7 +82,7 @@ CAMLprim value unix_truncate(value path, value len)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value unix_truncate_64(value path, value vlen)
+CAMLprim value NOINLINE unix_truncate_64(value path, value vlen)
 {
   CAMLparam2(path, vlen);
   WCHAR * p;
@@ -99,7 +99,7 @@ CAMLprim value unix_truncate_64(value path, value vlen)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value unix_ftruncate(value fd, value len)
+CAMLprim value NOINLINE unix_ftruncate(value fd, value len)
 {
   int ret;
   HANDLE h = Handle_val(fd);
@@ -111,7 +111,7 @@ CAMLprim value unix_ftruncate(value fd, value len)
   return Val_unit;
 }
 
-CAMLprim value unix_ftruncate_64(value fd, value vlen)
+CAMLprim value NOINLINE unix_ftruncate_64(value fd, value vlen)
 {
   int ret;
   HANDLE h = Handle_val(fd);

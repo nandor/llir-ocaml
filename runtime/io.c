@@ -164,7 +164,7 @@ CAMLexport int caml_channel_binary_mode(struct channel *channel)
    end of the flush, or false if some data remains in the buffer.
  */
 
-CAMLexport int caml_flush_partial(struct channel *channel)
+CAMLexport int NOINLINE caml_flush_partial(struct channel *channel)
 {
   int towrite, written;
 
@@ -200,7 +200,7 @@ CAMLexport void caml_putword(struct channel *channel, uint32_t w)
   caml_putch(channel, w);
 }
 
-CAMLexport int caml_putblock(struct channel *channel, char *p, intnat len)
+CAMLexport int NOINLINE caml_putblock(struct channel *channel, char *p, intnat len)
 {
   int n, free, towrite, written;
 
@@ -257,12 +257,12 @@ CAMLexport file_offset caml_pos_out(struct channel *channel)
 /* Input */
 
 /* caml_do_read is exported for Cash */
-CAMLexport int caml_do_read(int fd, char *p, unsigned int n)
+CAMLexport int NOINLINE caml_do_read(int fd, char *p, unsigned int n)
 {
   return caml_read_fd(fd, 0, p, n);
 }
 
-CAMLexport unsigned char caml_refill(struct channel *channel)
+CAMLexport unsigned char NOINLINE caml_refill(struct channel *channel)
 {
   int n;
 
@@ -289,7 +289,7 @@ CAMLexport uint32_t caml_getword(struct channel *channel)
   return res;
 }
 
-CAMLexport int caml_getblock(struct channel *channel, char *p, intnat len)
+CAMLexport int NOINLINE caml_getblock(struct channel *channel, char *p, intnat len)
 {
   int n, avail, nread;
 
@@ -351,7 +351,7 @@ CAMLexport file_offset caml_pos_in(struct channel *channel)
   return channel->offset - (file_offset)(channel->max - channel->curr);
 }
 
-CAMLexport intnat caml_input_scan_line(struct channel *channel)
+CAMLexport intnat NOINLINE caml_input_scan_line(struct channel *channel)
 {
   char * p;
   int n;

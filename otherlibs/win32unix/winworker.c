@@ -278,7 +278,7 @@ void worker_cleanup(void)
   };
 }
 
-LPWORKER worker_job_submit (WORKERFUNC f, void *user_data)
+LPWORKER NOINLINE worker_job_submit (WORKERFUNC f, void *user_data)
 {
   LPWORKER lpWorker = worker_pop();
 
@@ -311,7 +311,7 @@ void worker_job_stop (LPWORKER lpWorker)
   DEBUG_PRINT("Signal sent to worker %x", lpWorker);
 }
 
-void worker_job_finish (LPWORKER lpWorker)
+void NOINLINE worker_job_finish (LPWORKER lpWorker)
 {
   DEBUG_PRINT("Finishing call of worker %x", lpWorker);
   caml_enter_blocking_section();
