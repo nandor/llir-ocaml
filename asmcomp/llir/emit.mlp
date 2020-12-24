@@ -546,7 +546,7 @@ let fundecl f =
 
       let sp_val = make_temp () in
       let sp_frame = make_temp () in
-      `  mov.i64 {emit_temp sp_val}, $sp\n`;
+      `  get.i64 {emit_temp sp_val}, $sp\n`;
       `  frame.i64 {emit_temp sp_frame}, {emit_int trap_depth}, 8\n`;
       `  st [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
 

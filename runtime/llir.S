@@ -160,8 +160,8 @@ caml_raise_exn:
   raise.caml  $19, $20, $0, $1, $2, $21, $4
 #endif
 .Lactive.caml_raise_exn:
-  mov.i64     $11, $ret_addr
-  mov.i64     $12, $frame_addr
+  get.i64     $11, $ret_addr
+  get.i64     $12, $frame_addr
 
   mov.i64     $17, caml_stash_backtrace
   call.c      $17, $4, $11, $12, $3
@@ -316,7 +316,7 @@ caml_start_program_helper:
   mov.i64                   $54, .Lhandler_impl
   st                        [$51], $54
   frame.i64                 $52, 0, 8            # Pointer to stack frame.
-  mov.i64                   $55, $sp
+  get.i64                   $55, $sp
   st                        [$52], $55
   frame.i64                 $53, 0, 16           # Pointer to exn chain.
   mov.i64                   $70, offset_exception_pointer # Caml_state->exception_pointer
@@ -635,12 +635,12 @@ caml_ml_array_bound_error:
   st.i64                  [$101], $3
 #endif
 
-  mov.i64                 $4, $ret_addr
+  get.i64                 $4, $ret_addr
   mov.i64                 $5, offset_last_return_address
   add.i64                 $6, $0, $5
   st                      [$6], $4
 
-  mov.i64                 $7, $frame_addr
+  get.i64                 $7, $frame_addr
   mov.i64                 $8, offset_bottom_of_stack
   add.i64                 $9, $0, $8
   st                      [$9], $7
