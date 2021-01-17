@@ -468,7 +468,7 @@ color_t caml_allocation_color (void *hp)
   }
 }
 
-Caml_inline value caml_alloc_shr_aux (mlsize_t wosize, tag_t tag, int track,
+Caml_inline value NOINLINE caml_alloc_shr_aux (mlsize_t wosize, tag_t tag, int track,
                                       int raise_oom, uintnat profinfo)
 {
   header_t *hp;
