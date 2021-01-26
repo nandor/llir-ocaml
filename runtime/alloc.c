@@ -55,7 +55,7 @@ value NOINLINE caml_alloc_small_aux(intnat wosize, tag_t tag, uintnat profinfo,
 #define Setup_for_gc
 #define Restore_after_gc
 
-CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
+CAMLexport value NOINLINE caml_alloc (mlsize_t wosize, tag_t tag)
 {
   value result;
   mlsize_t i;
@@ -81,7 +81,7 @@ CAMLexport value caml_alloc (mlsize_t wosize, tag_t tag)
   return result;
 }
 
-CAMLexport value caml_alloc_small (mlsize_t wosize, tag_t tag)
+CAMLexport value NOINLINE caml_alloc_small (mlsize_t wosize, tag_t tag)
 {
   value result;
 
@@ -92,7 +92,7 @@ CAMLexport value caml_alloc_small (mlsize_t wosize, tag_t tag)
   return result;
 }
 
-CAMLexport value caml_alloc_small_with_my_or_given_profinfo (mlsize_t wosize,
+CAMLexport value NOINLINEcaml_alloc_small_with_my_or_given_profinfo (mlsize_t wosize,
   tag_t tag, uintnat profinfo)
 {
   if (profinfo == 0) {
@@ -116,7 +116,7 @@ CAMLexport value caml_alloc_tuple(mlsize_t n)
 }
 
 /* [len] is a number of bytes (chars) */
-CAMLexport value caml_alloc_string (mlsize_t len)
+CAMLexport value NOINLINE caml_alloc_string (mlsize_t len)
 {
   value result;
   mlsize_t offset_index;
@@ -183,7 +183,7 @@ CAMLexport value caml_alloc_array(value (*funct)(char const *),
 }
 
 /* [len] is a number of floats */
-value caml_alloc_float_array(mlsize_t len)
+value NOINLINE caml_alloc_float_array(mlsize_t len)
 {
 #ifdef FLAT_FLOAT_ARRAY
   mlsize_t wosize = len * Double_wosize;
