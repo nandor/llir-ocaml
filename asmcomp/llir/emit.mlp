@@ -314,28 +314,36 @@ let fundecl f =
       ` {emit_state_regs ()}{emit_regs arg ", " ""}`;
       ` {emit_frame false dbg}\n`
     | Iextcall { func; alloc } ->
-      state_fields |> List.iter (fun (field, reg) ->
-        let addr = domain_field field in
-        `  st.i64  [{emit_temp addr}], {emit_temp reg}\n`);
-      let addr = make_temp () in
-      `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
-      begin match handler with
-        | None -> `  call`;
-        | Some _ -> `  invoke`;
-      end;
-      `{emit_string (call_types res)}.c`;
-      ` {emit_regs res "" ","}`;
-      ` {emit_temp addr}`;
-      ` {emit_regs arg ", " ""}`;
-      begin match handler with
-        | None -> ()
-        | Some (handler, _) -> `, {emit_label handler}`;
-      end;
-      if alloc then ` {emit_frame false dbg}`;
-      `\n`;
-      state_fields |> List.iter (fun (field, reg) ->
-        let addr = domain_field field in
-        `  ld.i64  {emit_temp reg}, [{emit_temp addr}]\n`)
+      if alloc then begin
+        state_fields |> List.iter (fun (field, reg) ->
+          let addr = domain_field field in
+          `  st.i64  [{emit_temp addr}], {emit_temp reg}\n`);
+        let addr = make_temp () in
+        `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
+        begin match handler with
+          | None -> `  call`;
+          | Some _ -> `  invoke`;
+        end;
+        `{emit_string (call_types res)}.c`;
+        ` {emit_regs res "" ","}`;
+        ` {emit_temp addr}`;
+        ` {emit_regs arg ", " ""}`;
+        begin match handler with
+          | None -> ()
+          | Some (handler, _) -> `, {emit_label handler}`;
+        end;
+        ` {emit_frame false dbg}\n`;
+        state_fields |> List.iter (fun (field, reg) ->
+          let addr = domain_field field in
+          `  ld.i64  {emit_temp reg}, [{emit_temp addr}]\n`)
+      end else begin
+        let addr = make_temp () in
+        `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
+        `  call{emit_string (call_types res)}.c`;
+        ` {emit_regs res "" ","}`;
+        ` {emit_temp addr}`;
+        ` {emit_regs arg ", " ""}\n`
+      end
     | Iload(size, addr) ->
       let extension from dst kind =
         let ext = make_temp () in
