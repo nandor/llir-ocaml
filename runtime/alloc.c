@@ -92,7 +92,7 @@ CAMLexport value NOINLINE caml_alloc_small (mlsize_t wosize, tag_t tag)
   return result;
 }
 
-CAMLexport value NOINLINEcaml_alloc_small_with_my_or_given_profinfo (mlsize_t wosize,
+CAMLexport value NOINLINE caml_alloc_small_with_my_or_given_profinfo (mlsize_t wosize,
   tag_t tag, uintnat profinfo)
 {
   if (profinfo == 0) {
