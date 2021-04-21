@@ -27,7 +27,15 @@ let emit_symbol s = Emitaux.emit_symbol '$' s
 let emit_label lbl = emit_string ".L"; emit_int lbl
 
 let fundecl f =
+  let align = 
+    match Arch.subarch with
+    | AMD64 -> 4
+    | ARM64 -> 8
+    | RISCV -> 8
+    | POWER -> 4
+  in
   `  .section .text\n`;
+  `  .p2align {emit_int align}\n`;
   `  .globl {emit_symbol f.fun_name}\n`;
   `{emit_symbol f.fun_name}:\n`;
   `  .call\tcaml\n`;
@@ -749,4 +757,3 @@ let reference_symbols symbols =
 let begin_assembly () = ()
 
 let end_assembly () = ()
-
