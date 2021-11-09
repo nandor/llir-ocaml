@@ -30,8 +30,8 @@ let fundecl f =
   let align = 
     match Arch.subarch with
     | AMD64 -> 4
-    | ARM64 -> 8
-    | RISCV -> 8
+    | ARM64 -> 3
+    | RISCV -> 3
     | POWER -> 4
   in
   `  .section .text\n`;

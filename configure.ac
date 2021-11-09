@@ -1031,11 +1031,13 @@ AS_CASE([$arch],
   [amd64|s390x|none],
     # ocamlopt generates PIC code or doesn't generate code at all
     [],
-  [AS_CASE([$host],
-    [*-linux-musl],
-       # Alpine and other musl-based Linux distributions
-       [common_cflags="-no-pie $common_cflags"],
-    [])])
+  [AS_IF([test x"$enable_llir" = "xyes"],
+    [],
+    [AS_CASE([$host],
+      [*-linux-musl],
+         # Alpine and other musl-based Linux distributions
+         [common_cflags="-no-pie $common_cflags"],
+      [])])])
 
 # We first compute default values for as and aspp
 # If values have been given by the user then they take precedence over
