@@ -190,8 +190,8 @@ let fundecl f =
     | Iadd    -> emit "add"
     | Isub    -> emit "sub"
     | Imul    -> emit "mul"
-    | Idiv    -> emit "sdiv"
-    | Imod    -> emit "srem"
+    | Idiv    -> emit "s_div"
+    | Imod    -> emit "s_rem"
     | Iand    -> emit "and"
     | Ior     -> emit "or"
     | Ixor    -> emit "xor"
@@ -203,8 +203,8 @@ let fundecl f =
       let regb = make_temp () in
       let regr = make_temp () in
       let regc = make_temp () in
-      `  sext.i128 {emit_temp rega}, {emit_reg lhs.(0)}\n`;
-      `  sext.i128 {emit_temp regb}, {rhs ()}\n`;
+      `  s_ext.i128 {emit_temp rega}, {emit_reg lhs.(0)}\n`;
+      `  s_ext.i128 {emit_temp regb}, {rhs ()}\n`;
       `  mul.i128 {emit_temp regr}, {emit_temp rega}, {emit_temp regb}\n`;
       `  mov.i8 {emit_temp regc}, 64\n`;
       `  srl.i128 {emit_temp regr}, {emit_temp regr}, {emit_temp regc}\n`;
@@ -325,7 +325,7 @@ let fundecl f =
       if alloc then begin
         state_fields |> List.iter (fun (field, reg) ->
           let addr = domain_field field in
-          `  st.i64  [{emit_temp addr}], {emit_temp reg}\n`);
+          `  store.i64  [{emit_temp addr}], {emit_temp reg}\n`);
         let addr = make_temp () in
         `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
         begin match handler with
@@ -343,7 +343,7 @@ let fundecl f =
         ` {emit_frame false dbg}\n`;
         state_fields |> List.iter (fun (field, reg) ->
           let addr = domain_field field in
-          `  ld.i64  {emit_temp reg}, [{emit_temp addr}]\n`)
+          `  load.i64  {emit_temp reg}, [{emit_temp addr}]\n`)
       end else begin
         let addr = make_temp () in
         `  mov.i64 {emit_temp addr}, {emit_symbol func}\n`;
@@ -363,13 +363,13 @@ let fundecl f =
         )
       in
       let load_ty, temp, extend = match size with
-        | Byte_unsigned       -> extension "i8"  "i64" "zext"
-        | Byte_signed         -> extension "i8"  "i64" "sext"
-        | Sixteen_unsigned    -> extension "i16" "i64" "zext"
-        | Sixteen_signed      -> extension "i16" "i64" "sext"
-        | Thirtytwo_unsigned  -> extension "i32" "i64" "zext"
-        | Thirtytwo_signed    -> extension "i32" "i64" "sext"
-        | Single              -> extension "f32" "f64" "fext"
+        | Byte_unsigned       -> extension "i8"  "i64" "z_ext"
+        | Byte_signed         -> extension "i8"  "i64" "s_ext"
+        | Sixteen_unsigned    -> extension "i16" "i64" "z_ext"
+        | Sixteen_signed      -> extension "i16" "i64" "s_ext"
+        | Thirtytwo_unsigned  -> extension "i32" "i64" "z_ext"
+        | Thirtytwo_signed    -> extension "i32" "i64" "s_ext"
+        | Single              -> extension "f32" "f64" "f_ext"
         | Word_int
         | Word_val ->
           ( string_of_type res.(0).typ
@@ -385,12 +385,12 @@ let fundecl f =
       in
       (match addr with
       | Iindexed(0) ->
-        `  ld.{emit_string load_ty} {temp ()}, [{emit_reg arg.(0)}]\n`
+        `  load.{emit_string load_ty} {temp ()}, [{emit_reg arg.(0)}]\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(0)}, {emit_temp imm}\n`;
-        `  ld.{emit_string load_ty} {temp ()}, [{emit_temp addr}]\n`
+        `  load.{emit_string load_ty} {temp ()}, [{emit_temp addr}]\n`
       );
       extend ()
     | Istore(size, addr, _) ->
@@ -416,12 +416,12 @@ let fundecl f =
       in
       (match addr with
       | Iindexed(0) ->
-        `  st [{emit_reg arg.(1)}], {ext ()}\n`
+        `  store [{emit_reg arg.(1)}], {ext ()}\n`
       | Iindexed(n) ->
         let imm = emit_const n in
         let addr = make_temp () in
         `  add.i64 {emit_temp addr}, {emit_reg arg.(1)}, {emit_temp imm}\n`;
-        `  st [{emit_temp addr}], {ext ()}\n`
+        `  store [{emit_temp addr}], {ext ()}\n`
       );
     | Ialloc { bytes; dbginfo } ->
       let adjust, func =
@@ -459,23 +459,23 @@ let fundecl f =
     | Imulf ->
       `  mul.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Idivf ->
-      `  sdiv.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
+      `  s_div.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}, {emit_reg arg.(1)}\n`;
     | Ifloatofint ->
-      `  sext.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
+      `  s_ext.f64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Iintoffloat ->
       `  trunc.i64 {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Ispecific Ibswap16 ->
       let tmpa, tmpr = make_temp (), make_temp () in
       `  trunc.i16 {emit_temp tmpa}, {emit_reg arg.(0)}\n`;
-      `  bswap.i16 {emit_temp tmpr}, {emit_temp tmpa}\n`;
-      `  zext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
+      `  byte_swap.i16 {emit_temp tmpr}, {emit_temp tmpa}\n`;
+      `  z_ext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
     | Ispecific Ibswap32 ->
       let tmpa, tmpr = make_temp (), make_temp () in
       `  trunc.i32 {emit_temp tmpa}, {emit_reg arg.(0)}\n`;
-      `  bswap.i32 {emit_temp tmpr}, {emit_temp tmpa}\n`;
-      `  zext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
+      `  byte_swap.i32 {emit_temp tmpr}, {emit_temp tmpa}\n`;
+      `  z_ext.{emit_res res} {emit_reg res.(0)}, {emit_temp tmpr}\n`;
     | Ispecific Ibswap64 ->
-      `  bswap.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
+      `  byte_swap.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
     | Ispecific Isqrt ->
       `  sqrt.{emit_res res} {emit_reg res.(0)}, {emit_reg arg.(0)}\n`;
   in
@@ -490,7 +490,7 @@ let fundecl f =
     | Llabel(label) ->
       `{emit_label label}:\n`
     | Lbranch(label) ->
-      `  jmp {emit_label label}\n`
+      `  jump {emit_label label}\n`
     | Lcondbranch(test, p, label) ->
       begin match test with
       | Itruetest ->
@@ -558,38 +558,38 @@ let fundecl f =
       let jmp_frame = make_temp () in
       `  mov.i64 {emit_temp jmp_addr}, {emit_label lbl_handler}\n`;
       `  frame.i64 {emit_temp jmp_frame}, {emit_int trap_depth}, 0\n`;
-      `  st [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`;
+      `  store [{emit_temp jmp_frame}], {emit_temp jmp_addr}\n`;
 
       let sp_val = make_temp () in
       let sp_frame = make_temp () in
       `  get.i64 {emit_temp sp_val}, $sp\n`;
       `  frame.i64 {emit_temp sp_frame}, {emit_int trap_depth}, 8\n`;
-      `  st [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
+      `  store [{emit_temp sp_frame}], {emit_temp sp_val}\n`;
 
       let exc_frame = make_temp () in
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
       begin match get_field Domainstate.Domain_exception_pointer with
       | Some reg ->
-        `  st [{emit_temp exc_frame}], {emit_temp reg}\n`;
+        `  store [{emit_temp exc_frame}], {emit_temp reg}\n`;
         `  mov.i64 {emit_temp reg}, {emit_temp jmp_frame}\n`;
       | None ->
         let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
         let exc_ptr_old_val = make_temp () in
-        `  ld.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
-        `  st [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
-        `  st [{emit_temp exc_ptr_addr}], {emit_temp jmp_frame}\n`;
+        `  load.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_ptr_addr}]\n`;
+        `  store [{emit_temp exc_frame}], {emit_temp exc_ptr_old_val}\n`;
+        `  store [{emit_temp exc_ptr_addr}], {emit_temp jmp_frame}\n`;
       end
     | Lpoptrap { trap_depth }->
       let exc_frame = make_temp () in
       `  frame.i64 {emit_temp exc_frame}, {emit_int trap_depth}, 16\n`;
       begin match get_field Domainstate.Domain_exception_pointer with
       | Some reg ->
-        `  ld.i64 {emit_temp reg}, [{emit_temp exc_frame}]\n`;
+        `  load.i64 {emit_temp reg}, [{emit_temp exc_frame}]\n`;
       | None ->
         let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
         let exc_ptr_old_val = make_temp () in
-        `  ld.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
-        `  st.8 [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`;
+        `  load.i64 {emit_temp exc_ptr_old_val}, [{emit_temp exc_frame}]\n`;
+        `  store [{emit_temp exc_ptr_addr}], {emit_temp exc_ptr_old_val}\n`;
       end
     | Lraise { kind; lbl_handler } ->
       let emit_call () =
@@ -611,7 +611,7 @@ let fundecl f =
         `  # Lraise (Lambda.Raise_regular)\n`;
         let pos_addr = domain_field Domainstate.Domain_backtrace_pos in
         let zero = emit_const 0 in
-        `  st [{emit_temp pos_addr}], {emit_temp zero}\n`;
+        `  store [{emit_temp pos_addr}], {emit_temp zero}\n`;
         emit_call ()
       | Lambda.Raise_reraise ->
         `  # Lraise (Lambda.Raise_reraise)\n`;
@@ -625,33 +625,33 @@ let fundecl f =
           | _ ->
             let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
             let frame_addr = make_temp () in
-            `  ld.i64 {emit_temp frame_addr}, [{emit_temp exc_ptr_addr}]\n`;
+            `  load.i64 {emit_temp frame_addr}, [{emit_temp exc_ptr_addr}]\n`;
             frame_addr
         in
         let off = emit_const 8 in
         let addr = make_temp () in
-        `  ld.i64 {emit_temp addr}, [{emit_temp frame_addr}]\n`;
+        `  load.i64 {emit_temp addr}, [{emit_temp frame_addr}]\n`;
         let addr8 = make_temp () in
         `  add.i64 {emit_temp addr8}, {emit_temp frame_addr}, {emit_temp off}\n`;
         let addr16 = make_temp () in
         `  add.i64 {emit_temp addr16}, {emit_temp addr8}, {emit_temp off}\n`;
         let sp_val = make_temp () in
-        `  ld.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
+        `  load.i64 {emit_temp sp_val}, [{emit_temp addr8}]\n`;
         let frame_val = make_temp () in
-        `  ld.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
+        `  load.i64 {emit_temp frame_val}, [{emit_temp addr16}]\n`;
         begin match get_field Domainstate.Domain_exception_pointer with
         | Some reg ->
           `  mov.i64 {emit_temp reg}, {emit_temp frame_val}\n`;
         | None ->
           let exc_ptr_addr = domain_field Domainstate.Domain_exception_pointer in
-          `  st [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
+          `  store [{emit_temp exc_ptr_addr}], {emit_temp frame_val}\n`;
         end;
         begin match lbl_handler with
         | None ->
           `  raise.caml {emit_temp addr}, {emit_temp sp_val}, {emit_state_regs ()}, {emit_reg arg.(0)}\n`;
         | Some (_, ha) ->
           `  mov.v64 {emit_reg Proc.loc_exn_bucket}, {emit_reg arg.(0)}\n`;
-          `  jmp {emit_label ha}\n`
+          `  jump {emit_label ha}\n`
         end
       end
   in
